@@ -1,0 +1,45 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Exams;
+@using QBS;
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+    string pageContent = "";
+    
+    if ((currentId != 0) && (Modules.Permission(modules, Modules.EVAL_EXAM_CATALOG)))
+    {
+        string cmd = Request.Form["cmd"];
+        
+        if(cmd == "EXLIST")
+        {
+            string examList = Request.Form["lst"];
+            string[] examListArr = Common.CSVToArray(examList);
+            string list = "";
+            foreach(string examId in examListArr)
+            {
+                try
+                {
+                    Exam exam = new Exam(Convert.ToInt32(examId));
+                    list = Common.StrAdd(list, ", ", exam.ExamName);
+                }
+                catch(FormatException ex) {}
+            }            
+            Context.Response.Clear();
+            Context.Response.Write(list);
+            Context.Response.End();
+        }
+    }
+    else
+    {
+        Context.Response.Clear();
+        Context.Response.Write(Text.CannotPerformCommand);
+        Context.Response.End();
+    }
+}

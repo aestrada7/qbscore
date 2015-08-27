@@ -1,0 +1,343 @@
+﻿@using System.Data;
+@using System.Drawing;
+@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS.IO;
+@using QBS;
+@using OfficeOpenXml;
+@using Newtonsoft.Json;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.mdl_Import_Users;
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    string pageContent = "";
+    if ((currentId != 0) && (Modules.Permission(modules, Modules.IMPORT_USERS)))
+    {
+        ImportExport importExport = new ImportExport();
+        DataTable dataTable = importExport.BuildLayout();
+        if (Request.Form["cmd"] == "down")
+        {
+            try
+            {
+                using (ExcelPackage excel = new ExcelPackage())
+                {
+                    ExcelWorksheet sheet = excel.Workbook.Worksheets.Add(Text.mdl_Import_Users);
+                    int i = 1;
+                    foreach (string columnName in importExport.ColumnTitles)
+                    {
+                        sheet.Cells[1, i].Value = columnName;
+                        sheet.Cells[1, i].Style.Font.Bold = true;
+                        sheet.Cells[1, i].Style.Font.Color.SetColor(Color.White);
+                        sheet.Cells[1, i].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        sheet.Cells[1, i].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0x780077CC));
+                        //validation stuff
+                        string currentIdTxt = dataTable.Columns[i - 1].ColumnName.ToString();
+                        int currentDataId = currentIdTxt.Contains("_") ? 0 : Convert.ToInt32(currentIdTxt);
+                        DataDesc dataDesc = new DataDesc(currentDataId);
+                        string currentAddress = sheet.Cells[2, i, ExcelPackage.MaxRows, i].Address;
+                        if (dataDesc.Kind == Data.OPTIONS)
+                        {
+                            var validation = sheet.DataValidations.AddListValidation(currentAddress);
+                            validation.ShowErrorMessage = true;
+                            validation.ShowInputMessage = true;
+                            validation.Error = Text.InvalidData;
+                            string[] values = Common.CSVToArray('|', "|" + dataDesc.AuxValues);
+                            foreach (string value in values)
+                            {
+                                validation.Formula.Values.Add(value);
+                            }
+                        }
+                        else if (dataDesc.Kind == Data.INTEGER)
+                        {
+                            var validation = sheet.DataValidations.AddIntegerValidation(currentAddress);
+                            validation.ShowErrorMessage = true;
+                            validation.ShowInputMessage = true;
+                            NumberJSON numberJSON = JsonConvert.DeserializeObject<NumberJSON>(dataDesc.AuxValues);
+                            validation.Formula.Value = numberJSON.from;
+                            validation.Formula2.Value = numberJSON.to;
+                            if((numberJSON.to == 0) && (numberJSON.from == numberJSON.to))
+                            {
+                                validation.Formula2.Value = Int32.MaxValue;
+                            }
+                            validation.Error = Common.StrLang(Text.EnterIntegerBetweenXandY, validation.Formula.Value + "," + validation.Formula2.Value);
+                        }
+                        else if (dataDesc.Kind == Data.FLOAT)
+                        {
+                            var validation = sheet.DataValidations.AddDecimalValidation(currentAddress);
+                            validation.ShowErrorMessage = true;
+                            validation.ShowInputMessage = true;
+                            NumberJSON numberJSON = JsonConvert.DeserializeObject<NumberJSON>(dataDesc.AuxValues);
+                            validation.Formula.Value = numberJSON.from;
+                            validation.Formula2.Value = numberJSON.to;
+                            if ((numberJSON.to == 0) && (numberJSON.from == numberJSON.to))
+                            {
+                                validation.Formula2.Value = Int32.MaxValue;
+                            }
+                            validation.Error = Common.StrLang(Text.EnterValueBetweenXandY, validation.Formula.Value + "," + validation.Formula2.Value);
+                        }
+                        else if (dataDesc.Kind == Data.SLIDER)
+                        {
+                            var validation = sheet.DataValidations.AddIntegerValidation(currentAddress);
+                            validation.ShowErrorMessage = true;
+                            validation.ShowInputMessage = true;
+                            validation.Formula.Value = 0;
+                            validation.Formula2.Value = Convert.ToInt32(dataDesc.AuxValues);
+                            validation.Error = Common.StrLang(Text.EnterIntegerBetweenXandY, "0," + dataDesc.AuxValues);
+                        }
+                        else if (dataDesc.Kind == Data.DATE)
+                        {
+                            var validation = sheet.DataValidations.AddDateTimeValidation(currentAddress);
+                            validation.ShowErrorMessage = true;
+                            validation.ShowInputMessage = true;
+                            validation.Error = Text.InvalidDate;
+                            validation.Formula.Value = DateTime.MinValue;
+                            validation.Formula2.Value = DateTime.MaxValue;
+                        }
+                        else if (dataDesc.Kind == Data.CHECKBOX)
+                        {
+                            var validation = sheet.DataValidations.AddIntegerValidation(currentAddress);
+                            validation.ShowErrorMessage = true;
+                            validation.ShowInputMessage = true;
+                            validation.Formula.Value = 0;
+                            validation.Formula2.Value = 1;
+                            validation.Error = Common.StrLang(Text.EnterIntegerBetweenXandY, "0,1");
+                        }
+                        else if (dataDesc.Kind == Data.YES_NO)
+                        {
+                            var validation = sheet.DataValidations.AddListValidation(currentAddress);
+                            validation.ShowErrorMessage = true;
+                            validation.ShowInputMessage = true;
+                            validation.Error = Text.InvalidData;
+                            string[] values = Common.CSVToArray(Text.Yes + "," + Text.No);
+                            foreach (string value in values)
+                            {
+                                validation.Formula.Values.Add(value);
+                            }
+                        }
+                        else if (dataDesc.Kind == Data.EMAIL)
+                        {
+                            //var validation = sheet.DataValidations.AddCustomValidation(currentAddress);
+                            //validation.ShowErrorMessage = true;
+                            //validation.ShowInputMessage = true;
+                            //validation.Formula.ExcelFormula = "=AND(FIND(\"@\"," + currentAddress + "),FIND(\".\"," + currentAddress + "),ISERROR(FIND(\" \"," + currentAddress + ")))";
+                        }
+                        i++;
+                    }
+                    sheet.Cells.Style.Font.Name = "Segoe UI";
+                    sheet.Cells.AutoFitColumns();
+                    Response.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                    Response.AddHeader("content-disposition", "attachment; filename=qbsUsers_layout.xlsx");
+                    Response.BinaryWrite(excel.GetAsByteArray());
+                    Response.End();
+                }
+            }
+            catch (Exception ex) { }
+        }
+        else if (Request.Form["cmd"] == "up")
+        {
+            HttpPostedFileBase postedFile = Request.Files["uploadedLayout"];
+            try
+            {
+                using(ExcelPackage excel = new ExcelPackage(postedFile.InputStream))
+                {
+                    ExcelWorkbook workbook = excel.Workbook;
+                    if (workbook != null)
+                    {
+                        ExcelWorksheet sheet = workbook.Worksheets.First();
+                        int i = 1;
+                        bool excelFileWrongLayout = false;
+                        foreach (string columnName in importExport.ColumnTitles)
+                        {
+                            if(sheet.Cells[1, i].Value.ToString() != columnName)
+                            {
+                                excelFileWrongLayout = true;
+                                break;
+                            }
+                            i++;
+                        }
+                        if(excelFileWrongLayout)
+                        {
+                            errorMessage = Text.WrongLayout;
+                        }
+                        else
+                        {
+                            string processLog = "";
+                            for(var k = 2; k <= sheet.Dimension.End.Row; k++)
+                            {
+                                string missingRequired = "";
+                                processLog += "<br />" + Text.Row + " " + k + ". ";
+                                i = 1;
+                                int newUserId = 0;
+                                User user = new User();
+                                foreach (DataColumn column in dataTable.Columns)
+                                {
+                                    //user fields
+                                    if (column.Caption == "usr_idexternal")
+                                    {
+                                        user.IdExternal = sheet.Cells[k, i].Text;
+                                    }
+                                    else if (column.Caption == "usr_username")
+                                    {
+                                        user.Username = sheet.Cells[k, i].Text;
+                                        if(String.IsNullOrEmpty(user.Username))
+                                        {
+                                            missingRequired = Common.StrAdd(missingRequired, ",", Text.Username);
+                                        }
+                                    }
+                                    else if (column.Caption == "usr_lastname")
+                                    {
+                                        user.LastName = sheet.Cells[k, i].Text;
+                                        if(String.IsNullOrEmpty(user.LastName))
+                                        {
+                                            missingRequired = Common.StrAdd(missingRequired, ",", Text.LastName);
+                                        }
+                                    }
+                                    else if (column.Caption == "usr_mlastname")
+                                    {
+                                        user.MotherLastName = sheet.Cells[k, i].Text;
+                                    }
+                                    else if (column.Caption == "usr_name")
+                                    {
+                                        user.Name = sheet.Cells[k, i].Text;
+                                        if (String.IsNullOrEmpty(user.Name))
+                                        {
+                                            missingRequired = Common.StrAdd(missingRequired, ",", Text.Name);
+                                        }
+                                    }
+                                    else if (column.Caption == "usr_password")
+                                    {
+                                        user.Password = sheet.Cells[k, i].Text;
+                                        user.IdRole = QBS.Roles.DEFAULT_ROLE_USER;
+                                        if (String.IsNullOrEmpty(user.Password))
+                                        {
+                                            missingRequired = Common.StrAdd(missingRequired, ",", Text.Password);
+                                        }
+                                        newUserId = user.Create();
+                                    }
+                                    i++;
+                                }
+                                if(newUserId != 0)
+                                {
+                                    i = 1;
+                                    foreach (DataColumn column in dataTable.Columns)
+                                    {
+                                        if(column.Caption.IndexOf("usr") == -1)
+                                        {
+                                            DataDesc dataDesc = new DataDesc(Convert.ToInt32(column.Caption));
+                                            UserData userData = new UserData(newUserId, Convert.ToInt32(column.Caption));
+                                            userData.Value = sheet.Cells[k, i].Text;
+                                            if(dataDesc.Kind == Data.TREE)
+                                            {
+                                                userData.Value = dataDesc.GetTreeIdsFromValue(userData.Value);
+                                            }
+                                            if (!dataDesc.IsValid(userData.Value) && dataDesc.Required == 1)
+                                            {
+                                                missingRequired = Common.StrAdd(missingRequired, ",", dataDesc.Name);
+                                            }
+                                            else
+                                            {
+                                                userData.Update();
+                                            }
+                                        }
+                                        i++;
+                                    }
+                                    if(!String.IsNullOrEmpty(missingRequired))
+                                    {
+                                        processLog += Text.RequiredFieldsMissing + " " + missingRequired;
+                                        user.Delete();
+                                    }
+                                    else
+                                    {
+                                        processLog += Text.RowImported;
+                                    }
+                                }
+                                else
+                                {
+                                    processLog += Common.StrLang(Text.UsernameTaken, user.Username);
+                                }
+                            }
+                            int idLog = QBSLog.Create(processLog, postedFile.FileName);
+                            Log.Add(SessionHandler.Id, LogKind.GENERAL, Modules.IMPORT_USERS, idLog, "");
+                            errorMessage = Text.ProcessCompleted + "<br /><a href='#' class='dark' onClick='viewLog(" + idLog + "); return false;'>" + Text.Detail + "</a>";
+                        }
+                    }
+                }
+            }
+            catch(IOException ex)
+            {
+                errorMessage = Text.MustSelectAFile;
+            }
+        }
+        SessionHandler.ClearAndAddToHistory(Menu.IMPORT_USERS);
+        if (Modules.Permission(modules, Modules.IMPORT_USERS))
+        {
+            pageContent = "<div align='center'>" + DrawInput.InputButton("upLayout", Text.Import, "", "upload();", "background-image: url(./images/new.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "") + "</div>";
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function submitForm() {
+        freezeBlocker();
+        $('#classicForm').submit();
+    }
+    function downloadLayout() {
+        $('#cmd').val("down");
+        showMessage(true, "@Text.PleaseWait", "");
+        $('#classicForm').submit();
+    }
+    function upload() {
+        $('#cmd').val("up");
+        $('#classicForm').attr("enctype", "multipart/form-data").attr("encoding", "multipart/form-data");
+        showMessage(true, "@Text.PleaseWait", "");
+        $('#classicForm').submit();
+    }
+}
+
+@section PageContent {
+    <div align="center">@Html.Raw(Text.LayoutNeeded)
+    <br /><br />
+    @Html.Raw(DrawInput.InputButton("downLayout", Text.DownloadLayout, "", "downloadLayout();", "background-image: url(./images/save.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", ""))
+    <br /><br />
+    <div style="border-top: 1px solid #CCCCCC;">&nbsp;</div>
+    @Html.Raw(DrawInput.InputFileField("uploadedLayout", "", "", "", "", ""))
+    </div>
+    @Html.Raw(pageContent)
+    <input type="hidden" id="cmd" name="cmd" value="" />
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

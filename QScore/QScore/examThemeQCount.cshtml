@@ -1,0 +1,37 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Exams;
+@using QBS;
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+            
+    if ((currentId != 0) && (Modules.Permission(modules, Modules.EVAL_EXAM_CATALOG)))
+    {
+        string fullIdTheme = Request["idTheme"];
+        int idTheme = ExamThemes.GetThemeIdFromTree(fullIdTheme);
+        if(idTheme != 0)
+        {
+            ExamTheme theme = new ExamTheme(idTheme);
+            Context.Response.Write(theme.NumberOfQuestions());
+        }
+        else
+        {
+            Context.Response.Clear();
+            Context.Response.Write(Text.Error + ": " + Text.mdl_Eval_Theme_Catalog + " " + fullIdTheme);
+            Context.Response.End();
+        }
+    }
+    else
+    {
+        Context.Response.Clear();
+        Context.Response.Write(Text.CannotPerformCommand);
+        Context.Response.End();
+    }
+}

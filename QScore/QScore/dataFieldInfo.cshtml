@@ -1,0 +1,279 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using System.Globalization;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS;
+@using Newtonsoft.Json;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.Field;
+    string errorMessage = "";
+    string subtitle = "";
+}
+
+@* Page Code *@
+@{
+    int dataId = 0;
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    string pageContent = "";
+    int maxOptionId = 0;
+    if ((currentId != 0) && (Modules.PermissionOr(modules, Modules.fieldsAdministratorModuleList)))
+    {
+        try
+        {
+            dataId = Convert.ToInt32(Request.Form["id"]);
+        }
+        catch(FormatException ex) {}
+        if(dataId == 0)
+        {
+            errorMessage = Text.Error;
+        }
+        DataDesc dataDesc = new DataDesc(Convert.ToInt32(dataId));
+        string command = Request["cmd"];
+        if(command == "S")
+        {
+            bool canSave = Modules.Permission(modules, Modules.EDIT_FIELDS);
+            if(canSave)
+            {
+                int errorCode = 0;
+                dataDesc.Name = Request.Form["dd_name"];
+                dataDesc.Inactive = Convert.ToInt32(Request.Form["dd_inactive"]);
+                dataDesc.InvisibleToSelf = Convert.ToInt32(Request.Form["dd_invisibleToSelf"]);
+                if(dataDesc.Kind != Data.LABEL && dataDesc.Kind != Data.CHECKBOX)
+                {
+                    dataDesc.Required = Convert.ToInt32(Request.Form["dd_required"]);
+                }
+
+                //Kind Specific Info
+                if(dataDesc.Kind == Data.LABEL)
+                {
+                    dataDesc.AuxValues = Request.Form["dd_label"];
+                }
+                if(dataDesc.Kind == Data.INTEGER || dataDesc.Kind == Data.FLOAT)
+                {
+                    int from = Convert.ToInt32(Request.Form["dd_from"]);
+                    int to = Convert.ToInt32(Request.Form["dd_to"]);
+                    if(from > to)
+                    {
+                        Response.Write(from + " " + to);
+                        errorMessage = Text.ChangesNotSaved + ". " + Text.InvalidData;
+                    }
+                    NumberJSON numberJSON = new NumberJSON();
+                    numberJSON.from = from;
+                    numberJSON.to = to;
+                    if((from == to) && (to == 0))
+                    {
+                        numberJSON.maxLength = "10";
+                    }
+                    else
+                    {
+                        numberJSON.maxLength = to.ToString().Length.ToString();
+                    }
+                    string jsonNumber = JsonConvert.SerializeObject(numberJSON);
+                    dataDesc.AuxValues = jsonNumber;
+                }
+                if(dataDesc.Kind == Data.SLIDER)
+                {
+                    dataDesc.AuxValues = Request.Form["dd_maxValue"];
+                }
+                if(dataDesc.Kind == Data.OPTIONS)
+                {
+                    string options = "";
+                    foreach(string key in Request.Form)
+                    {
+                        if(key.Length > 9)
+                        {
+                            if(key.Substring(0, 9) == "dd_option")
+                            {
+                                string option = Request.Form[key];
+                                if(!String.IsNullOrEmpty(option) && option != "#DELETED#")
+                                {
+                                    options = Common.StrAdd(options, "|", option);
+                                }
+                            }
+                        }
+                    }
+                    dataDesc.AuxValues = options;
+                }
+                
+                if(String.IsNullOrEmpty(errorMessage)) 
+                {
+                    errorCode = dataDesc.Update();
+                    if (errorCode == ErrorCode.NO_ERROR)
+                    {
+                        errorMessage = Text.ChangesHaveBeenSaved;
+                        dataDesc = new DataDesc(dataId);
+                        command = "";
+                    }
+                    else if (errorCode == ErrorCode.ALREADY_EXISTS)
+                    {
+                        errorMessage = Text.ChangesNotSaved + " " + Common.StrLang(Text.RecordXTaken, dataDesc.Name);
+                    }
+                }
+            }
+            else
+            {
+                errorMessage = Text.CannotPerformCommand;
+            }
+        }
+        else if(command == "D")
+        {
+            if (Modules.Permission(modules, Modules.DELETE_FIELDS))
+            {
+                dataDesc.Delete();
+                Response.Redirect(SessionHandler.LastPageFromHistory());
+            }
+            else
+            {
+                errorMessage = Text.CannotPerformCommand;
+            }
+        }
+        subtitle = dataDesc.Name;
+
+        pageContent = "<table width='80%' align='center' id='infoTable'>";
+        
+        bool inUse = Common.GetBDNum("HowMany", "SELECT COUNT(*) AS HowMany FROM UserData WHERE IdData = " + dataDesc.IdData) > 0;
+        bool canBeEdited = !inUse && Modules.Permission(SessionHandler.Modules, Modules.EDIT_FIELDS);
+        bool canBeDeleted = !inUse && Modules.Permission(SessionHandler.Modules, Modules.DELETE_FIELDS);
+        bool canBeEditedLightly = Modules.Permission(SessionHandler.Modules, Modules.EDIT_FIELDS); //for activation or small things like name, invisibility, etc
+        string readOnlyProp = "readonly='readonly'";
+        string disabledProp = "disabled='disabled'";
+        
+        pageContent += "<tr><td width='30%'>" + Text.Name + ":</td><td width='70%'>" + DrawInput.InputTextField("dd_name", dataDesc.Name, "300", "", "", "width: 100%", !canBeEditedLightly ? readOnlyProp : "") + "</td></tr>";
+        pageContent += "<tr><td width='30%'>" + Text.Kind + ":</td><td width='70%'>" + Data.FriendlyName(dataDesc.Kind) + "</td></tr>";
+        pageContent += "<tr><td width='30%'>" + Text.Inactive + ":</td><td width='70%'>" + DrawInput.InputCheckbox("dd_inactive", dataDesc.Inactive.ToString(), (dataDesc.Inactive == 1), "", "", "", (!canBeEditedLightly ? disabledProp : "") + " onChange='toggleCheckbox($(this));'") + "</td></tr>";
+        pageContent += "<tr><td width='30%'>" + Text.InvisibleToSelf + ":</td><td width='70%'>" + DrawInput.InputCheckbox("dd_invisibleToSelf", dataDesc.InvisibleToSelf.ToString(), (dataDesc.InvisibleToSelf == 1), "", "", "", (!canBeEditedLightly ? disabledProp : "") + " onChange='toggleCheckbox($(this));'") + "</td></tr>";
+        if (dataDesc.Kind != Data.LABEL && dataDesc.Kind != Data.CHECKBOX)
+        {
+            pageContent += "<tr><td width='30%'>" + Text.Required + ":</td><td width='70%'>" + DrawInput.InputCheckbox("dd_required", dataDesc.Required.ToString(), (dataDesc.Required == 1), "", "", "", (!canBeEditedLightly ? disabledProp : "") + " onChange='toggleCheckbox($(this));'") + "</td></tr>";
+        }
+
+        //Kind Specific Info
+        if(dataDesc.Kind == Data.FLOAT || dataDesc.Kind == Data.INTEGER)
+        {
+            NumberJSON numberJSON = new NumberJSON();
+            if(!String.IsNullOrEmpty(dataDesc.AuxValues))
+            {
+                numberJSON = JsonConvert.DeserializeObject<NumberJSON>(dataDesc.AuxValues);
+            }
+            pageContent += "<tr><td width='30%'>" + Text.MinValue + ":</td><td width='70%'>" + DrawInput.InputTextField("dd_from", numberJSON.from.ToString(), "10", "", "", "", (!canBeEdited ? readOnlyProp : "") + " onKeyUp=\"validateInt($(this), event);\"") + "</td></tr>";
+            pageContent += "<tr><td width='30%'>" + Text.MaxValue + ":</td><td width='70%'>" + DrawInput.InputTextField("dd_to", numberJSON.to.ToString(), "10", "", "", "", (!canBeEdited ? readOnlyProp : "") + " onKeyUp=\"validateInt($(this), event);\"") + "</td></tr>";
+        }
+        if(dataDesc.Kind == Data.LABEL)
+        {
+            pageContent += "<tr><td width='30%'>" + Text.fld_Label + ":</td><td width='70%'>" + DrawInput.InputTextField("dd_label", dataDesc.AuxValues, "", "", "", "width: 100%", !canBeEditedLightly ? readOnlyProp : "") + "</td></tr>";
+        }
+        if(dataDesc.Kind == Data.SLIDER)
+        {
+            pageContent += "<tr><td width='30%'>" + Text.MaxValue + ":</td><td width='70%'>" + DrawInput.InputTextField("dd_maxValue", dataDesc.AuxValues, "10", "", "", "", (!canBeEdited ? readOnlyProp : "") + " onKeyUp=\"validateInt($(this), event);\"") + "</td></tr>";
+        }
+        if(dataDesc.Kind == Data.OPTIONS)
+        {
+            string[] options = Common.CSVToArray('|', "|" + dataDesc.AuxValues);
+            for (int i = 1; i < options.Length; i++)
+            {
+                bool inUseOption = Common.GetBDNum("HowMany", "SELECT COUNT(*) AS HowMany FROM UserData WHERE IdData = " + dataDesc.IdData + " AND Value = '" + Common.SQSF(options[i]) + "'") > 0;
+                pageContent += "<tr id='dd_row" + i + "'><td width='30%'>" + Text.Option + " " + i + ":</td><td width='70%'>" + DrawInput.InputTextField("dd_option" + i, options[i], "", "", "", "width: 90%", inUseOption ? readOnlyProp : "");
+                if (!inUseOption) 
+                {
+                    pageContent += "&nbsp;<a href='#' class='dark' onClick='deleteOption(" + i + ");'>" + Text.Delete + "</a>";
+                }
+                pageContent += "</td></tr>";
+            }
+            maxOptionId = options.Length;
+            pageContent += "<tr><td colspan='2' align='center'><a href='#' class='dark' onClick='addOption();'>" + Text.Add + "</a></td></tr>";
+            pageContent += DrawInput.InputHiddenField("dd_optionX", "", "", "");
+        }
+        pageContent += "</table>";
+        
+        string userOptions = "";
+        if (Modules.Permission(modules, Modules.EDIT_FIELDS))
+        {
+            userOptions = DrawInput.InputButton("saveBtn", Text.Save, "", "doSave();", "background-image: url(./images/save.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+        }
+        if (Modules.Permission(modules, Modules.DELETE_FIELDS))
+        {
+            userOptions = Common.StrAdd(userOptions, "&nbsp;", DrawInput.InputButton("deleteBtn", Text.Delete, "", "doDelete();", "background-image: url(./images/delete.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", ""));
+        }
+        userOptions = Common.StrAdd(userOptions, "&nbsp;", DrawInput.InputButton("backBtn", Text.Back, "", "goBack();", "background-image: url(./images/back.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", ""));
+        if (userOptions != "")
+        {
+            pageContent += "<div align='center' width='100%'>" + userOptions + "</div>";
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { @Html.Raw(subtitle) }
+@section BackButtonAddress { @SessionHandler.LastPageFromHistory() }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function goBack() {
+        location.href = '@SessionHandler.LastPageFromHistory()';
+    }
+
+    function doDelete() {
+        if(confirm("@Html.Raw(Text.ConfirmDelete)")) {
+            $('#cmd').val('D');
+            $('#classicForm').submit();
+        }
+    }
+
+    function doSave() {
+        $('.toBeAdded').each(function() {
+            var newVal = $(this).val();
+            $("#dd_optionX").val(strAdd($("#dd_optionX").val(), "|", newVal));
+        });
+        $('#cmd').val('S');
+        $('#classicForm').submit();
+    }
+
+    function deleteOption(id) {
+        $('#dd_option' + id).val("#DELETED#");
+        $('#dd_row' + id).hide();
+    }
+
+    var added = @maxOptionId;
+    function addOption() {
+        var newItemHTML = "<tr><td width='30%'>@Text.Option " + added + ":</td><td width='70%'>";
+        newItemHTML += '@Html.Raw(DrawInput.InputTextField("", "", "", "toBeAdded", "", "width: 90%", ""))';
+        newItemHTML += "</td></tr>";
+        $('#infoTable tr:last').before(function() {
+            return newItemHTML;
+        });
+        added++;
+    }
+}
+
+@section PageContent {
+    @Html.Raw(pageContent)
+    <input type="hidden" id="cmd" name="cmd" />
+    <input type="hidden" id="id" name="id" value="@dataId" />
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

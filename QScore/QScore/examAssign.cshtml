@@ -1,0 +1,201 @@
+﻿@using System.Data;
+@using System.Drawing;
+@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS.IO;
+@using QBS.Exams;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.mdl_Eval_Assign;
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    int currentPage = 0;
+    int currentTab = 0;
+    int totalUsers = 0;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+    currentPage = SessionHandler.RequestSessionInt("page");
+    currentTab = SessionHandler.RequestSessionInt("tab");
+    string examList = Request.Form["examList"];
+    if (currentPage == 0)
+    {
+        currentPage = 1;
+    }
+    Data.SetExtraListUsers();
+    string fullFilters = Data.GetFilters();
+    string windowTitle = Text.SelectionOf + " " + Text.Exam_s;
+    List<User> users = Users.GetUsers(fullFilters);
+    totalUsers = users.Count();
+    
+    if (Request.Form["cmd"] == "asg")
+    {
+        string examFilter = "";
+        if(!String.IsNullOrEmpty(examList))
+        {
+            examFilter = "IdExam IN(" + examList + ")";
+        }
+        bool canAdd = false;
+        List<Exam> exams = Exams.GetExams(examFilter);
+        string processLog = "";
+        foreach(User user in users)
+        {
+            foreach(Exam exam in exams)
+            {
+                string detail = "";
+                canAdd = true;
+                UserExam userExam = new UserExam(exam.IdExam, user.IdUser);
+                if((userExam.IdUserExam != 0) && (userExam.Status == UserExamStatus.PENDING))
+                {
+                    canAdd = false;
+                    detail = Text.PendingExamExists;
+                }
+                if(userExam.IdUserExam == 0 && exam.SelfEnroll != 0)
+                {
+                    canAdd = false;
+                    detail = Text.SelfEnrollExamNotAttempted;
+                }
+                if(canAdd)
+                {
+                    processLog += Text.ExamAssigned + ": " + user.Username + " " + exam.ExamName + "<br />";
+                    Exams.ExamStart(user.IdUser, exam.IdExam, true);
+                }
+                else
+                {
+                    processLog += Text.ExamWasNotAssigned + " (" + user.Username + " " + exam.ExamName + ") - " + detail + "<br />";
+                }
+            }
+        }
+        int idLog = QBSLog.Create(processLog, Text.mdl_Eval_Assign);
+        Log.Add(SessionHandler.Id, LogKind.GENERAL, Modules.EVAL_ASSIGN, idLog, "");
+        errorMessage = Text.ProcessCompleted + "<br /><a href='#' class='dark' onClick='viewLog(" + idLog + "); return false;'>" + Text.Detail + "</a>";
+    }
+
+    string pageContent = "";
+    if ((currentId != 0) && (Modules.Permission(modules, Modules.EVAL_REPORTS)))
+    {
+        SessionHandler.ClearAndAddToHistory(Menu.EVAL_RESULTS);
+        pageContent += Users.GetUserList(SessionHandler.Modules, currentPage, fullFilters);
+
+        string userOptions = "";
+        userOptions = "<br />" + DrawInput.InputButton("assign", Text.Assign, "", "doAssign();", "background-image: url(./images/new.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+        pageContent += "<div align='center' width='100%'>" + userOptions + "</div>";
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function doAssign() {
+        if($("#examList").val()) {
+            var msg = "@Html.Raw(Text.XExamsWillBeAssignedToYUsers + " " + Text.ConfirmAction)";
+            var numberOfExams = $("#examList").val().split(",").length;
+            var numberOfUsers = @totalUsers;
+            var isConfirmed = confirm(msg.replace("%%0", numberOfExams).replace("%%1", numberOfUsers));
+            if(isConfirmed) {
+                $('#cmd').val("asg");
+                $("#tab").val(currentTab);
+                $('#classicForm').submit();
+            }
+        } else {
+            alert("@Html.Raw(Text.MissingFields)");
+        }
+    }
+
+    function submitForm() {
+        $('#cmd').val("");
+        $("#tab").val(currentTab);
+        $('#classicForm').submit();
+    }
+
+    function clearAdv() {
+        $('#cmd').val("");
+        $("#clearSearch").val(1);
+        $('#classicForm').submit();
+    }
+
+    function selectExams() {
+        showDialogAjax(true, "./qbsSel.cshtml", "cmd=EX&multi=1&ids=" + $("#examList").val(), 400, created, "@windowTitle");
+    }
+
+    function created() {
+        layoutElements();
+    }
+
+    function itemSelected(kind, selection) {
+        if(kind == "EX") {
+            $("#examList").val(selection);
+            getExamDesc();
+        }
+    }
+
+    function getExamDesc() {
+        $.ajax({
+            type: "POST",
+            url: "examAjaxAux.cshtml",
+            data: { lst: $("#examList").val(), cmd: "EXLIST" }
+        }).done(function(data) {
+            killAllMessages();
+            $("#examDesc").html(data);
+        });
+    }
+}
+
+@section PageContent {
+    @{
+        string advancedSearch = Data.BuildSearchHTML();
+        string searchDesc = Data.GetSearchDesc();
+    }
+    <div id="exams">
+        <span class='titleMid'>@Text.ExamsToAssign: @Html.Raw(DrawInput.InputButton("btnSelExam", Text.Select, "", "selectExams();", "", ""))</span>
+        <br />
+        <span id="examDesc">&nbsp;</span>
+    </div>
+    <div id="searchContent" class="smallText">
+        <span class='titleMid'>@Text.Search</span><br />
+        @Html.Raw(advancedSearch)
+        <center>@Html.Raw(DrawInput.InputButton("advSearch", Text.DoSearch, "", "submitForm();", "", ""))&nbsp;@Html.Raw(DrawInput.InputButton("clearAdvSearch", Text.Clear, "", "clearAdv();", "", ""))</center>
+        @Html.Raw(searchDesc)
+    </div>
+    @Html.Raw(pageContent)
+    <br />
+    <input type="hidden" id="cmd" name="cmd" value="" />
+    <input type="hidden" id="examList" name="examList" value="@examList" />
+    <input type="hidden" id="page" name="page" value="@currentPage" />
+    <input type="hidden" id="tab" name="tab" value="@currentTab" />
+    <input type="hidden" id="clearSearch" name="clearSearch" value="" />
+    <script type="text/javascript">
+        currentTab = @currentTab;
+        getExamDesc();
+    </script>
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

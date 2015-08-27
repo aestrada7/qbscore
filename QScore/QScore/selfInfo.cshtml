@@ -1,0 +1,55 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.Users;
+    string errorMessage = "";
+    string subtitle = "";
+}
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    string pageContent = "";
+    if ((currentId != 0) && (Modules.Permission(modules, Modules.EDIT_SELF_INFO)))
+    {
+        SessionHandler.ClearAndAddToHistory(Menu.MAIN_PAGE);
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+@section BackButtonAddress { @SessionHandler.LastPageFromHistory() }
+
+@section Errors { }
+
+@section JavaScript {
+    function selfInfo()
+    {
+        navigateToURL("@Menu.USER_INFO", "id", @currentId, "self", "1");
+    }
+}
+
+@section PageContent {
+    <script language="JavaScript">selfInfo();</script>
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

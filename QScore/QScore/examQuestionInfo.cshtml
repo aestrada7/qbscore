@@ -1,0 +1,262 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using System.Globalization;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS.Exams;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.Question;
+    string errorMessage = "";
+    string subtitle = "";
+    ExamQuestion question = new ExamQuestion();
+}
+
+@* Page Code *@
+@{
+    int questionId = 0;
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    string pageContent = "";
+    if ((currentId != 0) && (Modules.PermissionOr(modules, Modules.questionAdministratorModuleList)))
+    {
+        try
+        {
+            questionId = Convert.ToInt32(Request.Form["id"]);
+        }
+        catch(FormatException ex) {}
+        question = new ExamQuestion(questionId);
+        bool canEdit = Common.GetBDNum("HowMany", "SELECT COUNT(*) AS HowMany FROM UserExamQuestion WHERE IdQuestion = " + questionId + " AND IdOption <> 0") == 0;
+        if (!canEdit)
+        {
+            //errorMessage = Text.QuestionHasBeenUsedWillBeCloned;
+            errorMessage = Text.QuestionHasBeenUsedCantBeEdited;
+        }
+        string command = Request["cmd"];
+        if (command == "S")
+        {
+            int errorCode = 0;
+            question.Question = Request.Form["question"];
+            question.Status = Convert.ToInt32(Request.Form["status"]);
+            question.IdTheme = ExamThemes.GetThemeIdFromTree(Request.Form["theme"]);
+
+            if (questionId != 0)
+            {
+                errorCode = question.Update();
+                string[] optionsToDelete = Common.CSVToArray(Request.Form["optionDel"]);
+                foreach (ExamOption option in question.options)
+                {
+                    option.Points = Convert.ToInt32(Request.Form["optionPts_" + option.IdOption]);
+                    option.OptionText = Request.Form["option_" + option.IdOption];
+                    errorCode = option.Update();
+                    for (int i = 0; i < optionsToDelete.Length; i++)
+                    {
+                        if (optionsToDelete[i] == option.IdOption.ToString())
+                        {
+                            errorCode = option.Delete();
+                        }
+                    }
+                }
+            }
+            else
+            {
+                errorCode = question.Create();
+                questionId = question.IdQuestion;
+            }
+            if (errorCode == ErrorCode.NO_ERROR)
+            {
+                //new options
+                try
+                {
+                    string[] newPoints = Common.CSVToArray('|', Request.Form["newOptionsPoints"]);
+                    for (int i = 1; i <= Convert.ToInt32(Request.Form["newOptionsTotal"]); i++)
+                    {
+                        ExamOption option = new ExamOption();
+                        option.IdQuestion = questionId;
+                        option.OptionText = Request.Form["added_" + i];
+                        try
+                        {
+                            option.Points = Convert.ToInt32(newPoints[i - 1]);
+                        }
+                        catch(IndexOutOfRangeException ex) {}
+                        option.Create();
+                    }
+                }
+                catch (FormatException ex) { }
+                errorMessage = Text.ChangesHaveBeenSaved;
+                question = new ExamQuestion(questionId);
+                command = "";
+            }
+            else if (errorCode == ErrorCode.MISSING_FIELDS)
+            {
+                errorMessage = Text.MissingFields;
+                command = "";
+            }
+        }
+        else if (command == "D")
+        {
+            if (Modules.Permission(modules, Modules.EVAL_QUESTION_CATALOG_DELETE))
+            {
+                int errorCode = question.Delete();
+                if (errorCode == ErrorCode.NO_ERROR)
+                {
+                    Response.Redirect(SessionHandler.LastPageFromHistory());
+                }
+                else if (errorCode == ErrorCode.CANT_DELETE)
+                {
+                    errorMessage = Text.CantDelete;
+                }
+            }
+            else
+            {
+                errorMessage = Text.CannotPerformCommand;
+            }
+        }
+        string extraAttribs = canEdit ? "" : " readonly='readonly'";
+        pageContent = Text.Question + ":<br />" + DrawInput.InputTextArea("question", question.Question, "4", "", "", "", "width: 100%;", extraAttribs);
+        pageContent += "<br />" + Text.Active + ":&nbsp;" + DrawInput.InputCheckbox("status", question.Status.ToString(), (question.Status == ExamQuestionStatus.ACTIVE), "", "", "", "onChange='toggleCheckbox($(this));'" + extraAttribs);
+        pageContent += "<br /><br />" + Text.Theme + ":<br />" + ExamThemes.DrawThemeTreeSelect("theme", question.IdTheme.ToString(), 0, Text.None);
+        pageContent += "<br /><br />" + Text.Options + ":<br /><div id='optionsHolder'>";
+        foreach (ExamOption option in question.options)
+        {
+            if (Modules.Permission(modules, Modules.EVAL_QUESTION_CATALOG_EDIT) && canEdit)
+            {
+                pageContent += "<div id='optionDiv_" + option.IdOption + "'>" + Text.Points + ": " + DrawInput.InputSelect("optionPts_" + option.IdOption, option.Points.ToString(), "0,1", "0,1", "pointSelect", "", "", "");
+                pageContent += DrawInput.InputTextArea("option_" + option.IdOption, option.OptionText, "4", "", "", "", "width: 100%;", "");
+                pageContent += "<a href='#' class='dark' onClick='deleteOption(" + option.IdOption + ");return false;'>" + Text.Delete + "</a><br /><br /></div>";
+            }
+            else
+            {
+                pageContent += Text.Points + ": " + option.Points.ToString() + "<br />";
+                pageContent += Common.BBCodeToHTML(option.OptionText) + "<br /><br />";
+            }
+        }
+        if (canEdit)
+        {
+            pageContent += "</div><div align='center' width='100%'>" + DrawInput.InputButton("addBtn", Text.Add + " " + Text.Option, "", "addOption();", "background-image: url(./images/new.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "") + "</div><br />";
+        }
+        string userOptions = "";
+        if (Modules.Permission(modules, Modules.EVAL_QUESTION_CATALOG_EDIT) && canEdit)
+        {
+            userOptions = DrawInput.InputButton("saveBtn", Text.Save, "", "doSave();", "background-image: url(./images/save.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+        }
+        if (Modules.Permission(modules, Modules.EVAL_QUESTION_CATALOG_DELETE) && command != "N" && canEdit)
+        {
+            userOptions = Common.StrAdd(userOptions, "&nbsp;", DrawInput.InputButton("deleteBtn", Text.Delete, "", "doDelete();", "background-image: url(./images/delete.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", ""));
+        }
+        userOptions = Common.StrAdd(userOptions, "&nbsp;", DrawInput.InputButton("backBtn", Text.Back, "", "goBack();", "background-image: url(./images/back.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", ""));
+        if (userOptions != "")
+        {
+            pageContent += "<div align='center' width='100%'>" + userOptions + "</div>";
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section ExtraIncludes {
+    <script type="text/javascript" src="js/jquery.sceditor.bbcode.js"></script>
+    <script type="text/javascript" src="js/jquery.sceditor.@CultureInfo.CurrentCulture.ToString()_lang.js"></script>
+    <link href="css/themes/square.css" rel="Stylesheet" type="text/css" />
+}
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+@section BackButtonAddress { @SessionHandler.LastPageFromHistory() }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function goBack() {
+        location.href = '@SessionHandler.LastPageFromHistory()';
+    }
+
+    function deleteOption(id) {
+        $("#optionDiv_" + id).hide();
+        var optionsToDelete = $("#optionDel").val();
+        optionsToDelete = strAdd(optionsToDelete, ",", id);
+        $("#optionDel").val(optionsToDelete);
+    }
+
+    var newAdded = 0;
+    function addOption() {
+        var newHtml = '<div>@Html.Raw(Text.Points): @Html.Raw(DrawInput.InputSelect("", "", "0,1", "0,1", "pointSelect newOption", "", "", ""))';
+        newHtml += '@Html.Raw(DrawInput.InputTextArea("", "", "4", "", "toBeAdded", "", "width: 100%;", ""))<br /><br /></div>';
+        $("#optionsHolder").append(newHtml);
+        makeWYSIWYG();
+    }
+
+    function doDelete() {
+        if(confirm("@Html.Raw(Text.ConfirmDelete)")) {
+            $('#cmd').val('D');
+            $('#classicForm').submit();
+        }
+    }
+
+    function doSave() {
+        var optionCount = $(".pointSelect").size();
+        var hasCorrect = false;
+        var err = "";
+        $(".pointSelect").each(function() {
+            if(parseInt($(this).val()) == 1) {
+                hasCorrect = true;
+            }
+        });
+        if(optionCount <= 1) {
+            err = strAdd(err, "<br />", "@Html.Raw(Text.MustHaveAtLeastTwoOptions)");
+        }
+        if(!hasCorrect) {
+            err = strAdd(err, "<br />", "@Html.Raw(Text.MustSelectAtLeastOneCorrectAnswer)");
+        }
+        if(err != "") {
+            showMessage(true, err, 200);
+            return false;
+        }
+        var total = 0;
+        $('.toBeAdded').each(function() {
+            total++;
+            $(this).attr('id', "added_" + total);
+            $(this).attr('name', "added_" + total);
+            $("#newOptionsTotal").val(total);
+        });
+        $('.newOption').each(function() {
+            var newVal = $(this).val();
+            $("#newOptionsPoints").val(strAdd($("#newOptionsPoints").val(), "|", newVal));
+        });
+        $('#cmd').val('S');
+        $('#classicForm').submit();
+    }
+
+    @Html.Raw(Web.WYSIWYGAsFunction())
+}
+
+@section PageContent {
+    @Html.Raw(pageContent)
+    <input type="hidden" id="cmd" name="cmd" />
+    <input type="hidden" id="id" name="id" value="@questionId" />
+    <input type="hidden" id="newOptionsTotal" name="newOptionsTotal" />
+    <input type="hidden" id="newOptionsPoints" name="newOptionsPoints" />
+    <input type="hidden" id="optionDel" name="optionDel" />
+    @Html.Raw(Web.MakeWYSIWYG())
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

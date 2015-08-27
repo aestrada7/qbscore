@@ -1,0 +1,176 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS.Exams;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.mdl_Eval_Reports;
+    string subtitle = "";
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+    int userExamId = 0;
+
+    string pageContent = "";
+    if ((currentId != 0) && (Modules.Permission(modules, Modules.EVAL_REPORTS)))
+    {
+        try
+        {
+            userExamId = Convert.ToInt32(Request.Form["id"]);
+        }
+        catch(FormatException ex) {}
+        if(userExamId != 0)
+        {
+            UserExam userExam = new UserExam(userExamId);
+            User user = new User(userExam.IdUser);
+            Exam exam = new Exam(userExam.IdExam);
+            title = user.FullName(true);
+            subtitle = exam.ExamName;
+            pageContent += "<table width='100%'><tr><td><div class='titleMid'>" + Text.Score + ": " + String.Format("{0:0.00}", userExam.Score) + "</div>";
+            pageContent += "<div class='titleMid'>" + Text.Status + ": " + UserExamStatus.FriendlyText(userExam.Status) + "</div>";
+            pageContent += "<div class='titleMid'>" + Text.DateTime + ": " + userExam.DateComplete + "</div>";
+            pageContent += "<div>" + Charts.Slider(Common.HexColorFromValue("0077CC", "CC0000", userExam.Score / 100), String.Format("{0:0.00}", userExam.Score), "400") + "</div>";
+
+            string values = "";
+            string labels = "";
+            string questionDetail = "";
+            int totalThemes = 0;
+            List<int> idThemeList = new List<int>();
+            foreach (ExamContent examContent in exam.examContents)
+            {
+                //By Theme
+                if (examContent.IdTheme != 0)
+                {
+                    if (!idThemeList.Contains(examContent.IdTheme))
+                    {
+                        idThemeList.Add(examContent.IdTheme);
+                    }
+                }
+                //By Question
+                if (examContent.IdQuestion != 0)
+                {
+                    ExamQuestion question = new ExamQuestion(examContent.IdQuestion);
+                    if (!idThemeList.Contains(question.IdTheme))
+                    {
+                        idThemeList.Add(question.IdTheme);
+                    }
+                }
+            }
+            foreach (int idTheme in idThemeList)
+            {
+                totalThemes++;
+                string label = Convert.ToChar(totalThemes + 96).ToString();
+                if (idTheme != 0)
+                {
+                    double themeScore = 0;
+                    double themeTotal = 0;
+                    double themeCorrect = 0;
+                    ExamTheme theme = new ExamTheme(idTheme);
+                    questionDetail += "<tr><th width='30%'>" + theme.Theme + "</th><th width='30%'>" + Text.CorrectAnswer + "</th><th width='30%'>" + Text.SelectedAnswer + "</th><th width='10%'>" + Text.Points + "</th></tr>";
+                    pageContent += "<div class='titleMid'>" + label + ". " + theme.Theme + ": ";
+                    foreach (UserExamQuestion userExamQuestion in userExam.questions)
+                    {
+                        ExamQuestion question = new ExamQuestion(userExamQuestion.IdQuestion);
+                        if (theme.IsChild(question.IdTheme) || question.IdTheme == theme.IdTheme)
+                        {
+                            int questionPoints = 0;
+                            string correctOption = "";
+                            string selectedOption = "";
+                            themeTotal++;
+                            foreach (ExamOption option in question.options)
+                            {
+                                if (option.Points > 0)
+                                {
+                                    if (option.IdOption == userExamQuestion.IdOption)
+                                    {
+                                        themeCorrect++;
+                                        questionPoints = 1;
+                                    }
+                                    correctOption = option.OptionText;
+                                }
+                                if (option.IdOption == userExamQuestion.IdOption)
+                                {
+                                    selectedOption = option.OptionText;
+                                }
+                            }
+                            questionDetail += "<tr class='cellLight'><td>" + Common.BBCodeToHTML(question.Question) + "</td>";
+                            questionDetail += "<td>" + Common.BBCodeToHTML(correctOption) + "</td>";
+                            questionDetail += "<td>" + Common.BBCodeToHTML(selectedOption) + "</td>";
+                            questionDetail += "<td align='center'>" + questionPoints + "</td></tr>";
+                        }
+                    }
+                    try
+                    {
+                        themeScore = themeCorrect / themeTotal;
+                    }
+                    catch (DivideByZeroException ex) { }
+                    finally
+                    {
+                        if (themeTotal == 0)
+                        {
+                            themeScore = 0;
+                        }
+                    }
+                    pageContent += String.Format("{0:0.00}", themeScore * 100);
+                    pageContent += "</div>";
+                    values = Common.StrAdd(values, ",", (themeScore * 100).ToString());
+                    labels = Common.StrAdd(labels, ",", label);
+                }
+                else
+                {
+                }
+            }
+            pageContent += "</td><td align='right'>" + Charts.Radial("CC0000", values, "280", "280", "0", "100", "20", true, labels, true) + "</td></tr></table>";
+            pageContent += "<div class='titleMid'>" + Text.Detail + "</div>";
+            pageContent += "<table width='100%'>" + questionDetail + "</table>";
+        }
+        else
+        {
+            errorMessage = Text.Error;
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { @Html.Raw(subtitle) }
+@section BackButtonAddress { @SessionHandler.LastPageFromHistory() }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function goBack() {
+        location.href = '@SessionHandler.LastPageFromHistory()';
+    }
+}
+
+@section PageContent {
+    @Html.Raw(pageContent)
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

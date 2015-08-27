@@ -1,0 +1,276 @@
+﻿@using System.Data;
+@using System.Drawing;
+@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS.Exams;
+@using QBS.IO;
+@using QBS;
+@using OfficeOpenXml;
+@using Newtonsoft.Json;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.mdl_Eval_Import_Exams;
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    string pageContent = "";
+    if ((currentId != 0) && (Modules.Permission(modules, Modules.IMPORT_USERS)))
+    {
+        ImportExport importExport = new ImportExport();
+        DataTable dataTable = importExport.BuildExamLayout();
+        if (Request.Form["cmd"] == "down")
+        {
+            try
+            {
+                using (ExcelPackage excel = new ExcelPackage())
+                {
+                    ExcelWorksheet sheet = excel.Workbook.Worksheets.Add(Text.mdl_Eval_Import_Exams);
+                    int i = 1;
+                    foreach (string columnName in importExport.ColumnTitles)
+                    {
+                        sheet.Cells[1, i].Value = columnName;
+                        sheet.Cells[1, i].Style.Font.Bold = true;
+                        sheet.Cells[1, i].Style.Font.Color.SetColor(Color.White);
+                        sheet.Cells[1, i].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        sheet.Cells[1, i].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0x780077CC));
+                        //validation stuff
+                        string currentIdTxt = dataTable.Columns[i - 1].ColumnName.ToString();
+                        string currentAddress = sheet.Cells[2, i, ExcelPackage.MaxRows, i].Address;
+                        if (currentIdTxt != "question" && currentIdTxt != "theme" && currentIdTxt.Substring(0, 6) != "option")
+                        {
+                            var validation = sheet.DataValidations.AddIntegerValidation(currentAddress);
+                            validation.ShowErrorMessage = true;
+                            validation.ShowInputMessage = true;
+                            validation.Formula.Value = 0;
+                            validation.Formula2.Value = 1;
+                            validation.Error = Common.StrLang(Text.EnterIntegerBetweenXandY, validation.Formula.Value + "," + validation.Formula2.Value);
+                        }
+                        i++;
+                    }
+                    sheet.Cells.Style.Font.Name = "Segoe UI";
+                    sheet.Cells.AutoFitColumns();
+                    Response.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                    Response.AddHeader("content-disposition", "attachment; filename=qbsExams_layout.xlsx");
+                    Response.BinaryWrite(excel.GetAsByteArray());
+                    Response.End();
+                }
+            }
+            catch (Exception ex) { }
+        }
+        else if (Request.Form["cmd"] == "up")
+        {
+            HttpPostedFileBase postedFile = Request.Files["uploadedLayout"];
+            try
+            {
+                using(ExcelPackage excel = new ExcelPackage(postedFile.InputStream))
+                {
+                    ExcelWorkbook workbook = excel.Workbook;
+                    if (workbook != null)
+                    {
+                        ExcelWorksheet sheet = workbook.Worksheets.First();
+                        int i = 1;
+                        bool excelFileWrongLayout = false;
+                        foreach (string columnName in importExport.ColumnTitles)
+                        {
+                            if(sheet.Cells[1, i].Value.ToString() != columnName)
+                            {
+                                excelFileWrongLayout = true;
+                                break;
+                            }
+                            i++;
+                        }
+                        if(excelFileWrongLayout)
+                        {
+                            errorMessage = Text.WrongLayout;
+                        }
+                        else
+                        {
+                            string processLog = "";
+                            for(var k = 2; k <= sheet.Dimension.End.Row; k++)
+                            {
+                                string missingRequired = "";
+                                processLog += "<br />" + Text.Row + " " + k + ". ";
+                                i = 1;
+                                int newQuestionId = 0;
+                                bool questionExists = false;
+                                ExamTheme theme;
+                                ExamQuestion question = new ExamQuestion();
+                                foreach (DataColumn column in dataTable.Columns)
+                                {
+                                    if (column.Caption == "question")
+                                    {
+                                        question.Question = sheet.Cells[k, i].Text;
+                                        if (String.IsNullOrEmpty(question.Question))
+                                        {
+                                            missingRequired = Common.StrAdd(missingRequired, ",", Text.Question);
+                                        }
+                                    }
+                                    else if (column.Caption == "theme")
+                                    {
+                                        string tempThemeName = sheet.Cells[k, i].Text;
+                                        if(String.IsNullOrEmpty(tempThemeName))
+                                        {
+                                            missingRequired = Common.StrAdd(missingRequired, ",", Text.Theme);
+                                        }
+                                        else
+                                        {
+                                            theme = new ExamTheme(tempThemeName);
+                                            if(theme.IdTheme == 0)
+                                            {
+                                                theme.Theme = tempThemeName;
+                                                theme.Create();
+                                            }
+                                            question.IdTheme = theme.IdTheme;
+                                            if(!question.Exists())
+                                            {
+                                                question.Status = ExamQuestionStatus.ACTIVE;
+                                                question.Create();
+                                            }
+                                            else
+                                            {
+                                                questionExists = true;
+                                            }
+                                            newQuestionId = question.IdQuestion;
+                                        }
+                                    }
+                                    i++;
+                                }
+                                i = 1;
+                                int totalOptions = 0;
+                                int totalCorrect = 0;
+                                foreach (DataColumn column in dataTable.Columns)
+                                {
+                                    if(column.Caption.IndexOf("option") != -1)
+                                    {
+                                        if(newQuestionId != 0)
+                                        {
+                                            string tempOptionText = sheet.Cells[k, i].Text;
+                                            if(!String.IsNullOrEmpty(tempOptionText))
+                                            {
+                                                ExamOption option = new ExamOption();
+                                                option.OptionText = tempOptionText;
+                                                try
+                                                {
+                                                    option.Points = Convert.ToInt32(sheet.Cells[k, i + 1].Text);
+                                                }
+                                                catch (Exception ex) {}
+                                                option.IdQuestion = newQuestionId;
+                                                option.Create();
+                                                totalOptions++;
+                                                if (option.Points > 0)
+                                                {
+                                                    totalCorrect++;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    i++;
+                                }
+                                if(!String.IsNullOrEmpty(missingRequired))
+                                {
+                                    processLog += Text.RequiredFieldsMissing + " " + missingRequired;
+                                    question.Delete();
+                                }
+                                else if (totalOptions < 2)
+                                {
+                                    processLog += Text.MustHaveAtLeastTwoOptions;
+                                    question.Delete();
+                                }
+                                else if (totalCorrect == 0)
+                                {
+                                    processLog += Text.MustSelectAtLeastOneCorrectAnswer;
+                                    question.Delete();
+                                }
+                                else if(questionExists)
+                                {
+                                    processLog += Common.StrLang(Text.QuestionAlreadyExists, question.Question);
+                                    question.Delete();
+                                }
+                                else
+                                {
+                                    processLog += Text.RowImported;
+                                }
+                            }
+                            int idLog = QBSLog.Create(processLog, postedFile.FileName);
+                            Log.Add(SessionHandler.Id, LogKind.GENERAL, Modules.EVAL_IMPORT_EXAMS, idLog, "");
+                            errorMessage = Text.ProcessCompleted + "<br /><a href='#' class='dark' onClick='viewLog(" + idLog + "); return false;'>" + Text.Detail + "</a>";
+                        }
+                    }
+                }
+            }
+            catch(IOException ex)
+            {
+                errorMessage = Text.MustSelectAFile;
+            }
+        }
+        SessionHandler.ClearAndAddToHistory(Menu.EVAL_IMPORT_EXAMS);
+        if (Modules.Permission(modules, Modules.EVAL_IMPORT_EXAMS))
+        {
+            pageContent = "<div align='center'>" + DrawInput.InputButton("upLayout", Text.Import, "", "upload();", "background-image: url(./images/new.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "") + "</div>";
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function submitForm() {
+        $('#classicForm').submit();
+    }
+    function downloadLayout() {
+        freezeBlocker();
+        $('#cmd').val("down");
+        showMessage(true, "@Text.PleaseWait", "");
+        $('#classicForm').submit();
+    }
+    function upload() {
+        $('#cmd').val("up");
+        $('#classicForm').attr("enctype", "multipart/form-data").attr("encoding", "multipart/form-data");
+        showMessage(true, "@Text.PleaseWait", "");
+        $('#classicForm').submit();
+    }
+}
+
+@section PageContent {
+    <div align="center">@Html.Raw(Text.LayoutNeeded)
+    <br /><br />
+    @Html.Raw(DrawInput.InputButton("downLayout", Text.DownloadLayout, "", "downloadLayout();", "background-image: url(./images/save.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", ""))
+    <br /><br />
+    <div style="border-top: 1px solid #CCCCCC;">&nbsp;</div>
+    @Html.Raw(DrawInput.InputFileField("uploadedLayout", "", "", "", "", ""))
+    </div>
+    @Html.Raw(pageContent)
+    <input type="hidden" id="cmd" name="cmd" value="" />
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

@@ -1,0 +1,216 @@
+﻿@using System.Data;
+@using System.Drawing;
+@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS.IO;
+@using QBS;
+@using OfficeOpenXml;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.mdl_Export_Users;
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    string pageContent = "";
+    int currentTab = 0;
+    currentTab = SessionHandler.RequestSessionInt("tab");
+    if ((currentId != 0) && (Modules.Permission(modules, Modules.EXPORT_USERS)))
+    {
+        string fullFilters = "IdUser > 0";
+        Data.SetExtraListUsers();
+        fullFilters = Common.StrAdd(fullFilters, " AND ", Data.GetFilters());
+
+        if (Request.Form["cmd"] == "exp")
+        {
+            ImportExport importExport = new ImportExport();
+            DataTable dataTable = importExport.ExportData(fullFilters);
+            
+            try
+            {
+                using (ExcelPackage excel = new ExcelPackage())
+                {
+                    ExcelWorksheet sheet = excel.Workbook.Worksheets.Add(Text.mdl_Export_Users);
+                    int i = 1;
+                    foreach (string columnName in importExport.ColumnTitles)
+                    {
+                        sheet.Cells[1, i].Value = columnName;
+                        sheet.Cells[1, i].Style.Font.Bold = true;
+                        sheet.Cells[1, i].Style.Font.Color.SetColor(Color.White);
+                        sheet.Cells[1, i].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        sheet.Cells[1, i].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0x780077CC));
+                        i++;
+                    }
+                    sheet.Cells["A2"].LoadFromDataTable(dataTable, false);
+                    sheet.Cells.Style.Font.Name = "Segoe UI";
+                    sheet.Cells.AutoFitColumns();
+                    Response.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                    string date = DateTime.Now.Year.ToString() + DateTime.Now.Month.ToString().PadLeft(2, '0');
+                    date += DateTime.Now.Day.ToString().PadLeft(2, '0') + "_" + DateTime.Now.Hour.ToString().PadLeft(2, '0');
+                    date += DateTime.Now.Minute.ToString().PadLeft(2, '0') + DateTime.Now.Second.ToString().PadLeft(2, '0');
+                    Response.AddHeader("content-disposition", "attachment; filename=qbsUsers_" + date + ".xlsx");
+                    Response.BinaryWrite(excel.GetAsByteArray());
+                    Response.End();
+                }
+            }
+            catch (Exception ex) { }
+        }
+        else
+        {
+            SessionHandler.ClearAndAddToHistory(Menu.EXPORT_USERS);
+            string sql = "SELECT COUNT(IdUser) AS HowMany FROM Users";
+            sql = Common.StrAdd(sql, " WHERE ", fullFilters);
+            int numberOfItems = Common.GetBDNum("HowMany", sql);
+            pageContent = Common.StrLang(Text.XUsersWillBeExported, numberOfItems.ToString());
+
+            pageContent += "<table width='40%' align='center'>";
+            pageContent += "<tr><th colspan='2'>" + Text.FieldsToExport + "</th></tr>";
+
+            pageContent += "<tr><th>" + DrawInput.InputCheckbox("exp_dataGroup_usr", Request.Form["exp_dataGroup_usr"], (Request.Form["exp_dataGroup_usr"] == "1"), "", "", "", "onChange='toggleCheckbox($(this)); toggleChildren($(this), \"usr\");'") + "</th><th>" + Text.Users + "</th></tr>";
+            pageContent += "<tr><td width='20px' align='center'>" + DrawInput.InputCheckbox("usr_id", Request.Form["usr_id"], (Request.Form["usr_id"] == "1"), "dg_usr", "", "", "onChange='toggleCheckbox($(this)); checkParent(\"usr\");'");
+            pageContent += "</td><td>" + Text.Identifier + "</td></tr>";
+            pageContent += "<tr><td width='20px' align='center'>" + DrawInput.InputCheckbox("usr_idexternal", Request.Form["usr_idexternal"], (Request.Form["usr_idexternal"] == "1"), "dg_usr", "", "", "onChange='toggleCheckbox($(this)); checkParent(\"usr\");'");
+            pageContent += "</td><td>" + Text.ExternalIdentifier + "</td></tr>";
+            pageContent += "<tr><td width='20px' align='center'>" + DrawInput.InputCheckbox("usr_username", Request.Form["usr_username"], (Request.Form["usr_username"] == "1"), "dg_usr", "", "", "onChange='toggleCheckbox($(this)); checkParent(\"usr\");'");
+            pageContent += "</td><td>" + Text.Username + "</td></tr>";
+            pageContent += "<tr><td width='20px' align='center'>" + DrawInput.InputCheckbox("usr_lastname", Request.Form["usr_lastname"], (Request.Form["usr_lastname"] == "1"), "dg_usr", "", "", "onChange='toggleCheckbox($(this)); checkParent(\"usr\");'");
+            pageContent += "</td><td>" + Text.LastName + "</td></tr>";
+            pageContent += "<tr><td width='20px' align='center'>" + DrawInput.InputCheckbox("usr_mlastname", Request.Form["usr_mlastname"], (Request.Form["usr_mlastname"] == "1"), "dg_usr", "", "", "onChange='toggleCheckbox($(this)); checkParent(\"usr\");'");
+            pageContent += "</td><td>" + Text.MotherLastName + "</td></tr>";
+            pageContent += "<tr><td width='20px' align='center'>" + DrawInput.InputCheckbox("usr_name", Request.Form["usr_name"], (Request.Form["usr_name"] == "1"), "dg_usr", "", "", "onChange='toggleCheckbox($(this)); checkParent(\"usr\");'");
+            pageContent += "</td><td>" + Text.Name + "</td></tr>";
+            pageContent += "<tr><td width='20px' align='center'>" + DrawInput.InputCheckbox("usr_regdate", Request.Form["usr_regdate"], (Request.Form["usr_regdate"] == "1"), "dg_usr", "", "", "onChange='toggleCheckbox($(this)); checkParent(\"usr\");'");
+            pageContent += "</td><td>" + Text.RegistryDate + "</td></tr>";
+            pageContent += "<tr><td width='20px' align='center'>" + DrawInput.InputCheckbox("usr_status", Request.Form["usr_status"], (Request.Form["usr_status"] == "1"), "dg_usr", "", "", "onChange='toggleCheckbox($(this)); checkParent(\"usr\");'");
+            pageContent += "</td><td>" + Text.Status + "</td></tr>";
+
+            List<DataDesc> dataDescList = Data.GetDataDesc();
+            int currentDataGroup = 0;
+            foreach (DataDesc dataDesc in dataDescList)
+            {
+                if (dataDesc.Kind != Data.LABEL)
+                {
+                    if(dataDesc.IdDataGroup != currentDataGroup)
+                    {
+                        DataGroup dataGroup = new DataGroup(dataDesc.IdDataGroup);
+                        pageContent += "<tr><th>" + DrawInput.InputCheckbox("exp_dataGroup_" + dataGroup.IdDataGroup, Request.Form["exp_dataGroup_" + dataGroup.IdDataGroup], (Request.Form["exp_dataGroup_" + dataGroup.IdDataGroup] == "1"), "", "", "", "onChange='toggleCheckbox($(this)); toggleChildren($(this), " + dataGroup.IdDataGroup + ");'") + "</th><th>" + dataGroup.Name + "</th></tr>";
+                        currentDataGroup = dataDesc.IdDataGroup;
+                    }
+                    pageContent += "<tr><td width='20px' align='center'>" + DrawInput.InputCheckbox("exp_data_" + dataDesc.IdData, Request.Form["exp_data_" + dataDesc.IdData], (Request.Form["exp_data_" + dataDesc.IdData] == "1"), "dg_" + dataDesc.IdDataGroup, "", "", "onChange='toggleCheckbox($(this)); checkParent(" + dataDesc.IdDataGroup + ");'");
+                    pageContent += "</td><td>" + dataDesc.Name + "</td></tr>";
+                }
+            }
+            pageContent += "</table>";
+
+            string userOptions = "";
+            userOptions = "<br />" + DrawInput.InputButton("export", Text.Export, "", "doExport();", "background-image: url(./images/save.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+            if (userOptions != "")
+            {
+                pageContent += "<div align='center' width='100%'>" + userOptions + "</div>";
+            }
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function clearAdv() {
+        $("#clearSearch").val(1);
+        $('#classicForm').submit();
+    }
+    function toggleChildren(element, id) {
+        $(".dg_" + id).each(function() {
+            $(this).prop("checked", element.prop("checked"));
+            toggleCheckbox($(this));
+        });
+    }
+    function checkParent(id) {
+        var allChecked = true;
+        var allUnchecked = true;
+        $(".dg_" + id).each(function() {
+            if($(this).prop("checked")) {
+                allUnchecked = false;
+            } else {
+                allChecked = false;
+            }
+        });
+        if(allChecked) {
+            $("#exp_dataGroup_" + id).prop("checked", true);
+            toggleCheckbox($("#exp_dataGroup_" + id));
+            $("#exp_dataGroup_" + id).prop("indeterminate", false);
+        }
+        if(allUnchecked) {
+            $("#exp_dataGroup_" + id).prop("checked", false);
+            toggleCheckbox($("#exp_dataGroup_" + id));
+            $("#exp_dataGroup_" + id).prop("indeterminate", false);
+        }
+        if(!allChecked && !allUnchecked) {
+            $("#exp_dataGroup_" + id).prop("checked", false);
+            $("#exp_dataGroup_" + id).prop("indeterminate", true);
+        }
+    }
+    function submitForm() {
+        $("#tab").val(currentTab);
+        $('#classicForm').submit();
+    }
+    function doExport() {
+        freezeBlocker();
+        $('#cmd').val("exp");
+        showMessage(true, "@Text.PleaseWait", "");
+        $('#classicForm').submit();
+    }
+}
+
+@section PageContent {
+    @{
+        bool wasCleared = Request.Form["clearSearch"] == "1";
+        string advancedSearch = Data.BuildSearchHTML();
+        string searchDesc = Data.GetSearchDesc();
+    }
+    <div id='searchContent' class='smallText'>
+        <span class='titleMid'>@Text.Search</span><br />
+        @Html.Raw(advancedSearch)
+        <center>@Html.Raw(DrawInput.InputButton("advSearch", Text.DoSearch, "", "submitForm();", "", ""))&nbsp;@Html.Raw(DrawInput.InputButton("clearAdvSearch", Text.Clear, "", "clearAdv();", "", ""))</center></div>
+        @Html.Raw(searchDesc)
+    </div>
+    <br />
+    @Html.Raw(pageContent)
+    <input type="hidden" id="tab" name="tab" value="@currentTab" />
+    <input type="hidden" id="clearSearch" name="clearSearch" value="" />
+    <input type="hidden" id="cmd" name="cmd" value="" />
+    <script type="text/javascript">
+        currentTab = @currentTab;
+    </script>
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

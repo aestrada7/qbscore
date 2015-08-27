@@ -1,0 +1,153 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using System.Globalization;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS.Exams;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.Theme;
+    string errorMessage = "";
+    string subtitle = "";
+    ExamTheme theme = new ExamTheme();    
+}
+
+@* Page Code *@
+@{
+    int themeId = 0;
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    string pageContent = "";
+    if ((currentId != 0) && (Modules.PermissionOr(modules, Modules.themeAdministratorModuleList)))
+    {
+        try
+        {
+            themeId = Convert.ToInt32(Request.Form["id"]);
+        }
+        catch(FormatException ex) {}
+        theme = new ExamTheme(themeId);
+        string command = Request["cmd"];
+        if (command == "S")
+        {
+            int errorCode = 0;
+            theme.Theme = Request.Form["theme"];
+            theme.IdParentTheme = ExamThemes.GetThemeIdFromTree(Request.Form["themeParent"]);
+
+            if (themeId != 0)
+            {
+                errorCode = theme.Update();
+            }
+            else
+            {
+                errorCode = theme.Create();
+                themeId = theme.IdTheme;
+            }
+            if (errorCode == ErrorCode.NO_ERROR)
+            {
+                errorMessage = Text.ChangesHaveBeenSaved;
+                theme = new ExamTheme(themeId);
+                command = "";
+            }
+            else if (errorCode == ErrorCode.MISSING_FIELDS)
+            {
+                errorMessage = Text.MissingFields;
+                command = "";
+            }
+            else if (errorCode == ErrorCode.ALREADY_EXISTS)
+            {
+                errorMessage = Text.ChangesNotSaved + ": " + Common.StrLang(Text.RecordXTaken, theme.Theme);
+                command = "";
+            }
+        }
+        else if (command == "D")
+        {
+            if (Modules.Permission(modules, Modules.EVAL_THEME_CATALOG_DELETE))
+            {
+                int errorCode = theme.Delete();
+                if (errorCode == ErrorCode.NO_ERROR)
+                {
+                    Response.Redirect(SessionHandler.LastPageFromHistory());
+                }
+                else if (errorCode == ErrorCode.CANT_DELETE)
+                {
+                    errorMessage = Text.CantDelete;
+                }
+            }
+            else
+            {
+                errorMessage = Text.CannotPerformCommand;
+            }
+        }
+        pageContent = "<table width='70%' border='0' align='center'><tr><td align='right' width='40%'>" + Text.Theme + ":</td>";
+        pageContent += "<td align='left' width='60%'>" + DrawInput.InputTextField("theme", theme.Theme, "50", "", "", "width: 80%;", "") + "</td></tr>";
+        pageContent += "<tr><td align='right'>" + Text.ParentTheme + ":</td><td>" + ExamThemes.DrawThemeTreeSelect("themeParent", theme.IdParentTheme.ToString(), theme.IdTheme, Text.None) + "</td></tr></table>";
+        string userOptions = "";
+        if (Modules.Permission(modules, Modules.EVAL_THEME_CATALOG_EDIT))
+        {
+            userOptions = DrawInput.InputButton("saveBtn", Text.Save, "", "doSave();", "background-image: url(./images/save.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+        }
+        if (Modules.Permission(modules, Modules.EVAL_THEME_CATALOG_DELETE) && command != "N")
+        {
+            userOptions = Common.StrAdd(userOptions, "&nbsp;", DrawInput.InputButton("deleteBtn", Text.Delete, "", "doDelete();", "background-image: url(./images/delete.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", ""));
+        }
+        userOptions = Common.StrAdd(userOptions, "&nbsp;", DrawInput.InputButton("backBtn", Text.Back, "", "goBack();", "background-image: url(./images/back.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", ""));
+        if (userOptions != "")
+        {
+            pageContent += "<div align='center' width='100%'>" + userOptions + "</div>";
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+@section BackButtonAddress { @SessionHandler.LastPageFromHistory() }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function goBack() {
+        location.href = '@SessionHandler.LastPageFromHistory()';
+    }
+
+    function doDelete() {
+        if(confirm("@Html.Raw(Text.ConfirmDelete)")) {
+            $('#cmd').val('D');
+            $('#classicForm').submit();
+        }
+    }
+
+    function doSave() {
+        $('#cmd').val('S');
+        $('#classicForm').submit();
+    }
+}
+
+@section PageContent {
+    @Html.Raw(pageContent)
+    <input type="hidden" id="cmd" name="cmd" />
+    <input type="hidden" id="id" name="id" value="@themeId" />
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

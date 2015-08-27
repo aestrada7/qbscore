@@ -1,0 +1,74 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS;
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    if ((currentId != 0) && (Modules.PermissionOr(modules, Modules.EDIT_FIELDS + "," + Modules.DATAFIELDS_ADMINISTRATION)))
+    {
+        string idDataGroup = "";
+        string idDataList = "";
+        try
+        {
+            idDataGroup = Request.Form["idDG"].Replace("idDG_", "");
+            idDataList = Request.Form["idDD"].Replace("idDI_", "");
+        }
+        catch(NullReferenceException ex) {}
+        if (!String.IsNullOrEmpty(idDataList))
+        {
+            var i = 0;
+            if (idDataGroup == "dataGroups")
+            {
+                idDataList = idDataList.Replace("idGroup_", "");
+                foreach (string idDataGroupItem in Common.CSVToArray(idDataList))
+                {
+                    try
+                    {
+                        i++;
+                        DataGroup dataGroup = new DataGroup(Convert.ToInt32(idDataGroupItem));
+                        dataGroup.GroupSequence = i;
+                        dataGroup.SetSequence();
+                    }
+                    catch(FormatException ex) {}
+                }
+            }
+            else
+            {
+                foreach(string idData in Common.CSVToArray(idDataList))
+                {
+                    try
+                    {
+                        i++;
+                        DataDesc dataDesc = new DataDesc(Convert.ToInt32(idData));
+                        dataDesc.FieldSequence = i;
+                        dataDesc.IdDataGroup = Convert.ToInt32(idDataGroup);
+                        dataDesc.SetSequence();
+                    }
+                    catch(FormatException ex) {}
+                }
+            }
+            Log.Add(SessionHandler.Id, LogKind.UPDATE, Modules.DATAFIELDS_ADMINISTRATION, 0, "#FIELD_SEQUENCE#");
+            Context.Response.Clear();
+            Context.Response.End();
+        }
+        else
+        {
+            Context.Response.Clear();
+            Context.Response.End();
+        }
+    }
+    else
+    {
+        Context.Response.Clear();
+        Context.Response.Write(Text.CannotPerformCommand);
+        Context.Response.End();
+    }
+}

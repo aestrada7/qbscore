@@ -1,0 +1,62 @@
+﻿@using System.Configuration;
+@using Aexis;
+@using QBS;
+
+@{
+    string Title = Config.AppName();
+    string PageTitle = RenderSection("PageTitle", false).ToHtmlString();
+    string Subtitle = RenderSection("Subtitle", false).ToHtmlString();
+    string ExtraIncludes = "";
+    string BackButtonAddress = "";
+    try
+    {
+        BackButtonAddress = RenderSection("BackButtonAddress", false).ToHtmlString();
+        ExtraIncludes = RenderSection("ExtraIncludes", false).ToHtmlString();
+    }
+    catch(Exception ex) {}
+    
+    if(!String.IsNullOrWhiteSpace(Subtitle))
+    {
+        Title = PageTitle;
+        PageTitle = Subtitle;
+    }
+}
+
+<!DOCTYPE html />
+
+<html>
+<head>
+    <title>@Title - @PageTitle</title>
+    <link href="./layouts/Standard/Main.css.cshtml" rel="Stylesheet" type="text/css" />
+    <link href="./layouts/Standard/jquery-ui.css" rel="Stylesheet" type="text/css" />
+    <link href="css/menu.css" rel="Stylesheet" type="text/css" />
+    <script type="text/javascript" src="js/jquery-1.7.1.min.js"></script>
+    <script type="text/javascript" src="js/jquery-ui.custom.js"></script>
+    <script type="text/javascript" src="js/layout.js"></script>
+    <script type="text/javascript" src="js/common.js"></script>
+    <script type="text/javascript" src="js/menu.js"></script>
+    <script type="text/javascript" src="js/tristate.js"></script>
+    <script type="text/javascript" src="js/jquery.sticky.js"></script>
+    <script type="text/javascript" src="js/json_tree_select.js"></script>
+    <script type="text/javascript" src="js/jquery.autocomplete.js"></script>
+    <script type="text/javascript" src="js/jquery.qtip.js"></script>
+</head>
+<body>
+    <table width="90%" align="center">
+        <tr id="pageTitle" style="background-color: #FFFFFF;">
+            <td colspan="2" class="">
+                @Common.StrAdd(Title, " - ", PageTitle)
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+                @RenderSection("Errors")
+                @RenderSection("PageContent")
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3" style="text-align: right;" class="smallText"><div style="border-top: 1px solid #CCCCCC;">© @DateTime.Now.Year QBSoluciones</div></td>
+        </tr>
+    </table>
+</body>
+</html>

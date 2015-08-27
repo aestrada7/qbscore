@@ -1,0 +1,164 @@
+﻿@using System.Data;
+@using System.Drawing;
+@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS.Exams;
+@using QBS.IO;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.mdl_Eval_Import_Results;
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    int examId = 0;
+    string pageContent = "";
+    if ((currentId != 0) && (Modules.Permission(modules, Modules.EVAL_IMPORT_RESULTS)))
+    {
+        examId = Convert.ToInt32(Request.Form["examId"]);
+        if (Request.Form["cmd"] == "up")
+        {
+            if(examId != 0)
+            {
+                Exam exam = new Exam(examId);
+                int examItems = exam.examContents.Count;
+                HttpPostedFileBase postedFile = Request.Files["uploadedLayout"];
+                string logText = "";
+                try
+                {
+                    int i = 0;
+                    StreamReader reader = new StreamReader(postedFile.InputStream);
+                    string line;
+                    while((line = reader.ReadLine()) != null)
+                    {
+                        i++;
+                        string[] values = Common.CSVToArray(line);
+                        int totalItems = values.Length - 1;
+                        if(totalItems == examItems)
+                        {
+                            int userId = 0;
+                            userId = Convert.ToInt32(values[0]);
+                            User user = new User(userId);
+                            if(user.IdUser != 0)
+                            {
+                                int idUserExam = 0;
+                                UserExam userExam = new UserExam(examId, userId);
+                                if(userExam.IdUserExam == 0)
+                                {
+                                    idUserExam = Exams.ExamStart(userId, examId, true);
+                                }
+                                else if(userExam.IdUserExam != 0 && userExam.Status != UserExamStatus.PENDING)
+                                {
+                                    idUserExam = Exams.ExamStart(userId, examId, true);
+                                }
+                                else
+                                {
+                                    idUserExam = userExam.IdUserExam;
+                                }
+                                userExam = new UserExam(idUserExam);
+                                for (int k = 1; k < values.Length; k++)
+                                {
+                                    UserExamQuestion userQuestion = new UserExamQuestion(idUserExam, Common.GetBDNum("IdQuestion", "SELECT IdQuestion FROM UserExamQuestion WHERE IdUserExam = " + idUserExam + " AND QuestionSequence = " + k));
+                                    string txtAnswer = values[k];
+                                    int intAnswer = Convert.ToInt32(Convert.ToChar(txtAnswer.ToLower())) - 96;
+                                    userQuestion.IdOption = 0;
+                                    int currentOption = 0;
+                                    ExamQuestion question = new ExamQuestion(userQuestion.IdQuestion);
+                                    foreach (ExamOption option in question.options)
+                                    {
+                                        currentOption++;
+                                        if (currentOption == intAnswer)
+                                        {
+                                            userQuestion.IdOption = option.IdOption;
+                                            userQuestion.Update();
+                                        }
+                                    }
+                                }
+                                userExam = new UserExam(idUserExam);
+                                userExam.Grade();
+                                logText += Text.Row + " " + i + ": " + Text.RowImported + "<br>";
+                            }
+                            else
+                            {
+                                logText += Text.Row + " " + i + ": " + Text.UserDoesntExist + "<br>";
+                            }
+                        }
+                        else
+                        {
+                            logText += Text.Row + " " + i + ": " + Text.NumberOfAnswersDoesntMatch + "<br>";
+                        }
+                    }
+                    int idLog = QBSLog.Create(logText, postedFile.FileName);
+                    Log.Add(SessionHandler.Id, LogKind.GENERAL, Modules.EVAL_IMPORT_RESULTS, idLog, "");
+                    errorMessage = Text.ProcessCompleted + "<br /><a href='#' class='dark' onClick='viewLog(" + idLog + "); return false;'>" + Text.Detail + "</a>";
+                }
+                catch(IOException ex)
+                {
+                    errorMessage = Text.MustSelectAFile;
+                }
+            }
+            else
+            {
+                errorMessage = Text.MissingTheseFields + ": " + Text.Exam;
+            }
+        }
+        SessionHandler.ClearAndAddToHistory(Menu.EVAL_IMPORT_RESULTS);
+        if (Modules.Permission(modules, Modules.EVAL_IMPORT_RESULTS))
+        {
+            pageContent = "<div align='center'>" + DrawInput.InputButton("upLayout", Text.Import, "", "upload();", "background-image: url(./images/new.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "") + "</div>";
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function upload() {
+        $('#cmd').val("up");
+        $('#classicForm').attr("enctype", "multipart/form-data").attr("encoding", "multipart/form-data");
+        showMessage(true, "@Text.PleaseWait", "");
+        $('#classicForm').submit();
+    }
+}
+
+@section PageContent {
+    <div align="center">
+        @Html.Raw(Text.Exam): @Html.Raw(DrawInput.InputSelect("examId", examId.ToString(), "Exam", "IdExam", "Exam", "IdExam IN(SELECT DISTINCT(IdExam) FROM ExamContent WHERE IdQuestion <> 0) AND Status=" + ExamStatus.ACTIVE, "", "", "", ""))
+        <br />
+        @Html.Raw(DrawInput.InputFileField("uploadedLayout", "", "", "", "", ""))
+    </div>
+    @Html.Raw(pageContent)
+    <input type="hidden" id="cmd" name="cmd" value="" />
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

@@ -1,0 +1,86 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/LayoutLogin.cshtml";
+    string title = Text.LoginPage;
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    if(IsPost)
+    {
+        int currentId = Login.Authenticate(Request["usr"], Request["pwd"], false);
+        if(currentId != 0)
+        {
+            SessionHandler.Id = currentId;
+            SessionHandler.Modules = Modules.GetModules(currentId);
+            SessionHandler.SessionVars = new Dictionary<string, string>();
+            Response.Redirect(Menu.MAIN_PAGE);
+        }
+        else
+        {
+            errorMessage = Text.IncorrectCredentials;
+        }
+    }
+    string strout = "";
+    strout += "<span class='title'>" + Common.ConfigValue(1) + "</span><br /><br /><br />";
+    if(errorMessage != "")
+    {
+        strout += "<span style='color: #CC0000;' class='biggerText'>" + errorMessage + "</span><br />";
+    }
+    strout += "<span class='biggerText'>" + Text.InputLogin + "</span><br /><br />";
+    strout += "<span class='biggerText'>" + Text.Username + ":</span><br />";
+    strout += DrawInput.InputTextField("usr", Request["usr"], "20", "", "", "", "placeholder='" + Text.Username + "'") + "<br />";
+    strout += "<span class='biggerText'>" + Text.Password + ":</span><br />";
+    strout += DrawInput.InputPasswordField("pwd", "", "20", "", "", "", "placeholder='" + Text.Password + "'") + "<br /><br />";
+    strout += DrawInput.InputSubmit("btnLogin", Text.OK, "button", "doSubmit();", "", "");
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+
+@section Errors {}
+
+@section JavaScript {
+    function doSubmit()
+    {
+        if($("#usr").val() == "" || $("#pwd").val() == "")
+        {
+            alert("@Text.MissingFields");
+            return false;
+        }
+        $("#classicForm").submit();
+    }
+}
+
+@section PageContent {
+    <table width="100%">
+        <tr>
+            <td width="50%">
+                <img src="./images/login.jpg" />
+                <div style="margin: 0px; width: 435px; height: 100px; background-color: #1E82CC; padding: 20px; ">
+                    <span class="boxTitle">Retroalimentación Inmediata</span><br />
+                    <span class="boxText">Obtén resultados, estadísticas y más información al momento que sea requerida.</span>
+                </div>
+            </td>
+            <td width="50%" valign="top">
+                <table width="75%" align="center">
+                    <tr>
+                        <td>@Html.Raw(strout)</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+}
+
+@section Menu {}

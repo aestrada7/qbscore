@@ -1,0 +1,35 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/LayoutLogin.cshtml";
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    if(SessionHandler.Id != 0)
+    {
+        Log.Add(SessionHandler.Id, LogKind.SESSION, 0, 0, "#SESSION_END#");
+    }
+    Session.Abandon();
+    Response.Redirect("./login.cshtml");  
+}
+
+@* Page Output *@
+
+@section PageTitle {}
+
+@section Errors {}
+
+@section JavaScript {}
+
+@section PageContent {}
+
+@section Menu {}

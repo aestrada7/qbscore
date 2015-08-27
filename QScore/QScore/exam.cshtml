@@ -1,0 +1,293 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS.Exams;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = "";
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    int questionPerPage = 5;
+    int maxMins = 0;
+
+    int examId = 0;
+    int idUserExam = 0;
+    string questionList = "";
+    string pageContent = "";
+    if (currentId != 0)
+    {
+        try
+        {
+            examId = Convert.ToInt32(Request.Form["id"]);
+            idUserExam = Convert.ToInt32(Request.Form["idUE"]);
+        }
+        catch(FormatException ex) {}
+        if(idUserExam != 0)
+        {
+            UserExam tmpUE = new UserExam(idUserExam);
+            examId = tmpUE.IdExam;
+        }        
+        if(examId != 0)
+        {
+            Exam exam = new Exam(examId);
+            questionPerPage = exam.QuestionsPerPage;
+            maxMins = exam.MaxMins;
+            title = exam.ExamName;
+            string command = Request.Form["cmd"];
+            if(command == "S")
+            {
+                try
+                {
+                    idUserExam = Convert.ToInt32(Request.Form["idUE"]);
+                }
+                catch (FormatException ex) { }
+                if(idUserExam != 0)
+                {
+                    UserExam userExam = new UserExam(idUserExam);
+                    foreach (UserExamQuestion userQuestion in userExam.questions)
+                    {
+                        string txtAnswer = "";
+                        try
+                        {
+                            txtAnswer = Request.Form["t_" + userQuestion.IdQuestion];
+                        }
+                        catch(FormatException ex) {}
+                        if(!String.IsNullOrEmpty(txtAnswer))
+                        {
+                            int intAnswer = Convert.ToInt32(Convert.ToChar(txtAnswer)) - 96;
+                            userQuestion.IdOption = 0;
+                            int currentOption = 0;
+                            ExamQuestion question = new ExamQuestion(userQuestion.IdQuestion);
+                            foreach (ExamOption option in question.options)
+                            {
+                                currentOption++;
+                                if(currentOption == intAnswer)
+                                {
+                                    userQuestion.IdOption = option.IdOption;
+                                    userQuestion.Update();
+                                }
+                            }
+                        }
+                        else
+                        {
+                            errorMessage = Text.Error;
+                        }
+                    }
+                    userExam.Grade();
+                    Response.Redirect(SessionHandler.LastPageFromHistory());
+                }
+                else   
+                {
+                    errorMessage = Text.Error;
+                }
+            }
+            else
+            {
+                if(idUserExam == 0)
+                {
+                    idUserExam = Exams.ExamStart(SessionHandler.Id, examId, false);
+                }
+                if (idUserExam != 0)
+                {
+                    string tabHeader = "";
+                    string tabContent = "";
+                    int currentTab = 1;
+                    int currentQuestion = 0;
+                    pageContent = "<div id='test' style='display: none;'><div id='tabNav'>";
+                    UserExam userExam = new UserExam(idUserExam);
+                    if (exam.Shuffle == 1)
+                    {
+                        userExam.questions.Shuffle();
+                    }
+                    else
+                    {
+                        userExam.questions.Sort((x, y) => x.QuestionSequence.CompareTo(y.QuestionSequence));
+                    }
+                    foreach (UserExamQuestion userQuestion in userExam.questions)
+                    {
+                        if (currentQuestion == 0)
+                        {
+                            tabHeader += "<li><a href='#tabNav-" + currentTab + "'>" + Text.Page + " " + currentTab + "</a></li>";
+                            tabContent += "<div id='tabNav-" + currentTab + "'>";
+                        }
+                        else
+                        {
+                            if (currentQuestion % questionPerPage == 0)
+                            {
+                                currentTab++;
+                                tabHeader += "<li><a href='#tabNav-" + currentTab + "'>" + Text.Page + " " + currentTab + "</a></li>";
+                                tabContent += "</div><div id='tabNav-" + currentTab + "'>";
+                            }
+                        }
+                        ExamQuestion question = new ExamQuestion(userQuestion.IdQuestion);
+                        questionList = Common.StrAdd(questionList, ",", userQuestion.IdQuestion.ToString());
+                        tabContent += "<table border='0' cellspacing='0' cellpadding='2' width='100%'><tr><td width='90%'>" + (currentQuestion + 1) + ". " + Common.BBCodeToHTML(question.Question) + "</td>";
+                        int currentOption = 0;
+                        string optionsText = "";
+                        foreach (ExamOption option in question.options)
+                        {
+                            currentOption++;
+                            optionsText += DrawInput.InputRadio("q_" + question.IdQuestion, Convert.ToChar(currentOption + 96).ToString(), option.IdOption == userQuestion.IdOption, "", "sync(" + question.IdQuestion + ", '" + Convert.ToChar(currentOption + 96) + "');", "", "");
+                            optionsText += "<a href='#' onClick='sync(" + question.IdQuestion + ", \"" + Convert.ToChar(currentOption + 96) + "\"); return false;'>" + Convert.ToChar(currentOption + 96) + ". " + Common.BBCodeToHTML(option.OptionText + "</a><br />");
+                        }
+                        tabContent += "<td rowspan='2'>" + DrawInput.InputTextField("t_" + question.IdQuestion, "", "1", "", "", "width: 30px;", "onKeyUp='isValidInput($(this), " + currentOption + "); sync(" + question.IdQuestion + ", $(this).val()); return false;'") + "</td></tr>";
+                        tabContent += "<tr><td>" + optionsText + "</td></tr></table>";
+                        tabContent += "<br />";
+                        currentQuestion++;
+                    }
+                    tabContent += "</div>";
+                    pageContent += "<ul>" + tabHeader + "</ul>" + tabContent + "</div>";
+                    pageContent += "<div align='center'>" + DrawInput.InputButton("showInstr", Text.Instructions, "", "toggleInstrTest();", "", "");
+                    pageContent += "&nbsp;" + DrawInput.InputButton("btnFinish", Text.Finish, "", "finish();", "", "");
+                    pageContent += "</div></div>";
+                    pageContent += "<div id='instr'><span class='titleMid'>" + Text.Instructions + "</span><br /><br />" + Common.BBCodeToHTML(exam.Instructions);
+                    pageContent += "<div align='center'>" + DrawInput.InputButton("showTest", Text.Continue, "", "toggleInstrTest();", "", "");
+                    pageContent += "</div>";
+                }
+                else
+                {
+                    errorMessage = Text.Error;
+                }
+            }
+        }
+        else
+        {
+            errorMessage = Text.Error;
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    var qArr = '@questionList'.split(',');
+    function toggleInstrTest() {
+        $("#instr").fadeToggle(200);
+        $("#test").fadeToggle(200);
+        startTimer();
+    }
+
+    function isValidInput(element, total) {
+        var currentVal = $(element).val();
+        var currentCode = currentVal.charCodeAt(0);
+        var valid = false;
+        if((currentCode-97 < total) && (currentCode-97 >= 0)) {
+            valid = true;
+        } else {
+            if((currentCode-65 < total) && (currentCode-65 >= 0)) {
+                $(element).val(currentVal.toLowerCase());
+                valid = true;
+            } else {
+                $(element).val("");
+            }
+        }
+        if(valid) {
+            nextQuestion($(element).attr('id').substr(2));
+        }
+    }
+
+    function nextQuestion(current) {
+        var next = "";
+        var page = 0;
+        for(var i = 0; i < qArr.length; i++) {
+            if(current == qArr[i]) {
+                if(i != qArr.length) {
+                    next = qArr[i+1];
+                    page = parseInt((i + 1) / @questionPerPage);
+                }
+            }
+        }
+        if(next != "") {
+            $("#tabNav").tabs('select', page);
+            $("#t_" + next).focus();
+            $("#t_" + next).select();
+        }
+    }
+
+    function finish(forced) {
+        if(!forced) {
+            for(var i = 0; i < qArr.length; i++) {
+                if(!$("#t_" + qArr[i]).val()) {
+                    page = parseInt(i / @questionPerPage);
+                    $("#tabNav").tabs('select', page);
+                    $("#t_" + qArr[i]).focus();
+                    alert("@Text.MustAnswerEveryQuestion");
+                    return false;
+                }
+            }
+        }
+        $('#cmd').val('S');
+        $('#classicForm').submit();
+    }
+
+    function sync(idQuestion, option) {
+        $("#t_" + idQuestion).val(option);
+        $("#q_" + idQuestion + "[value=" + option + "]").prop('checked', true);
+    }
+
+    var startTime = new Date();
+    var timerStarted = false;
+    function startTimer() {
+        if(!timerStarted) {
+            var maxMins = @maxMins;
+            if(maxMins > 0) {
+                setInterval(checkTime, 5000);
+            }
+            timerStarted = true;
+        }
+    }
+
+    function checkTime() {
+        var currentTime = new Date();
+        var elapsed = currentTime.getTime() - startTime.getTime();
+        elapsed = elapsed / 1000;
+        var seconds = Math.floor(elapsed % 60);
+        elapsed = elapsed / 60;
+        var minutes = Math.floor(elapsed % 60);
+        alert(minutes + " "  + seconds);
+        if(minutes >= @maxMins) {
+            alert("@Text.TimesUp");
+            finish(true);
+        }
+    }
+}
+
+@section PageContent {
+    @Html.Raw(pageContent)
+    <input type="hidden" id="cmd" name="cmd" />
+    <input type="hidden" id="id" name="id" value="@examId" />
+    <input type="hidden" id="idUE" name="idUE" value="@idUserExam" />
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

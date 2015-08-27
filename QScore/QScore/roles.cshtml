@@ -1,0 +1,73 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.mdl_Role_Catalog;
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    string pageContent = "";
+    if ((currentId != 0) && (Modules.PermissionOr(modules, Modules.roleAdministratorModuleList)))
+    {
+        pageContent = QBS.Roles.GetRoleList(modules);
+        string userOptions = "";
+        if (Modules.Permission(modules, Modules.ROLE_CATALOG_ADD))
+        {
+            userOptions = "<br />" + DrawInput.InputButton("newRole", Text.Add, "", "doAdd();", "background-image: url(./images/new.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+        }
+        if (userOptions != "")
+        {
+            pageContent += "<div align='center' width='100%'>" + userOptions + "</div>";
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function showRole(id)
+    {
+        navigateToURL("@Menu.ROLE_EDIT", "id", id);
+    }
+
+    function doAdd()
+    {
+        navigateToURL("@Menu.ROLE_EDIT", "id", 0, "cmd", "N");
+    }
+}
+
+@section PageContent {
+    @Html.Raw(pageContent)
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

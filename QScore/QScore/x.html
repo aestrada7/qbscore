@@ -1,0 +1,150 @@
+﻿<html>
+<head>
+  <script src="./js/jquery-1.7.1.min.js"></script>
+  <script language="JavaScript">
+    var roles = new Array();
+    
+    function Role(_idModule, _idModuleParent)
+    {
+      this.idModule = _idModule;
+      this.idModuleParent = _idModuleParent;
+    }
+    
+    function treePropagate(prefix, status, elementAt)
+    {
+      var i;
+      for(i = 0; i < roles.length; i++)
+      {
+        if(roles[i].idModuleParent == elementAt)
+        {
+          if(status == 1) //checked
+          {
+            $("#" + prefix + roles[i].idModule).prop("checked", true);
+          }
+          else if(status == 0) //unchecked
+          {
+            $("#" + prefix + roles[i].idModule).prop("checked", false);
+          }
+          $("#" + prefix + roles[i].idModule).prop("indeterminate", false);
+          treePropagate(prefix, status, roles[i].idModule);
+        }
+      }
+    }
+    
+    function checkTree(prefix, status, elementAt, startedBy)
+    {
+      var i;
+      var totalChildren = 0;
+      var totalChecked = 0;
+      var totalUnchecked = 0;
+      var parent = 0;
+      //Handle the click and send it down
+      if(elementAt == startedBy) treePropagate(prefix, status, elementAt);
+      //Go down the hierarchy (depending on what they clicked)
+      for(i = 0; i < roles.length; i++)
+      {
+        if(roles[i].idModuleParent == elementAt)
+        {
+          totalChildren++;
+          if($("#" + prefix + roles[i].idModule).prop("checked"))
+          {
+            totalChecked++;
+          }
+          else
+          {
+            totalUnchecked++;
+          }
+        }
+      }
+      if(totalChildren > 0)
+      {
+        if(totalChildren == totalChecked)
+        {
+          $("#" + prefix + elementAt).prop("checked", true);
+          $("#" + prefix + elementAt).prop("indeterminate", false);
+        }
+        else
+        {
+          if(totalChildren == totalUnchecked)
+          {
+            $("#" + prefix + elementAt).prop("checked", false);
+            $("#" + prefix + elementAt).prop("indeterminate", false);
+          }
+          else
+          {
+            $("#" + prefix + elementAt).prop("checked", false);
+            $("#" + prefix + elementAt).prop("indeterminate", true);
+          }
+        }
+      }
+      //Go up the hierarchy
+      for(i = 0; i < roles.length; i++)
+      {
+        if(roles[i].idModule == elementAt)
+        {
+          parent = roles[i].idModuleParent;
+          if(status == 1) //checked
+          {
+            $("#" + prefix + roles[i].idModuleParent).prop("checked", true);
+          }
+          else if(status == 0) //unchecked
+          {
+            $("#" + prefix + roles[i].idModuleParent).prop("checked", false);
+          }
+          if(roles[i].idModuleParent != 0)
+          {
+            checkTree(prefix, status, roles[i].idModuleParent);
+          }
+        }
+      }
+    }
+    
+    $(document).ready(function(){
+      $('input[type=checkbox]').change(function () {
+        var stat = 0;
+        if($(this).prop("checked"))
+        {
+          stat = 1;
+        }
+        var idModule = $(this).prop("id").replace('grt_','');
+        checkTree('grt_', stat, idModule, idModule);
+      });
+    });
+    checkTree('grt_', stat, 0, 0);
+  </script>
+</head>
+<body>
+  <input type='checkbox' id='grt_100' name='grt_100' />100
+  <script language='JavaScript'>roles[roles.length] = new Role(100, 0);</script>
+  <br />
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type='checkbox' id='grt_101' name='grt_101' />101
+  <script language='JavaScript'>roles[roles.length] = new Role(101, 100);</script>
+  <br />
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type='checkbox' id='grt_102' name='grt_102' />102
+  <script language='JavaScript'>roles[roles.length] = new Role(102, 100);</script>
+  <br />
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type='checkbox' id='grt_103' name='grt_103' />103
+  <script language='JavaScript'>roles[roles.length] = new Role(103, 100);</script>
+  <br />
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type='checkbox' id='grt_104' name='grt_104' />104
+  <script language='JavaScript'>roles[roles.length] = new Role(104, 100);</script>
+  <br />
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type='checkbox' id='grt_105' name='grt_105' />105
+  <script language='JavaScript'>roles[roles.length] = new Role(105, 104);</script>
+  <br />
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type='checkbox' id='grt_106' name='grt_106' checked='checked' />106
+  <script language='JavaScript'>roles[roles.length] = new Role(106, 104);</script>
+  <br />
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type='checkbox' id='grt_107' name='grt_107' />107
+  <script language='JavaScript'>roles[roles.length] = new Role(107, 100);</script>
+  <br />
+  <input type='checkbox' id='grt_200' name='grt_200' />200
+  <script language='JavaScript'>roles[roles.length] = new Role(200, 0);</script>
+  <br />
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type='checkbox' id='grt_201' name='grt_201' />201
+  <script language='JavaScript'>roles[roles.length] = new Role(201, 200);</script>
+  <br />
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type='checkbox' id='grt_202' name='grt_202' />202
+  <script language='JavaScript'>roles[roles.length] = new Role(202, 200);</script>
+</body>
+</html>

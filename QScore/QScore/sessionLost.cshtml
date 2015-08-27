@@ -1,0 +1,64 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.SessionExpired;
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    if(IsPost)
+    {
+        Response.Redirect(Menu.LOGIN);
+    }
+    int currentId = SessionHandler.Id;
+
+    string pageContent = "";
+    if (currentId != 0)
+    {
+        SessionHandler.ClearHistory();
+        Response.Redirect(Menu.MAIN_PAGE);
+    }
+    else
+    {
+        errorMessage = Text.LostSession;
+        pageContent = DrawInput.InputButton("btnOk", Text.OK, "button", "doSubmit();", "font-size: 12px;", "");
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <br /><br /><div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function doSubmit()
+    {
+        $("#classicForm").submit();
+    }
+}
+
+@section PageContent {
+    <center>
+        @Html.Raw(pageContent)
+    </center>
+}
+
+@section Menu {}

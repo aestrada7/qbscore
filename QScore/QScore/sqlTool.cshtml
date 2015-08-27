@@ -1,0 +1,131 @@
+@using System.Configuration;
+@using System.Resources;
+@using System.Data;
+@using System.Data.SqlClient;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = "SQL Tool";
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    string pageContent = "";
+    if (currentId != 0)
+    {
+        SessionHandler.ClearHistory();
+        string sqlStatement = Request.Form["cmd"];
+        if (!String.IsNullOrEmpty(sqlStatement))
+        {
+            string connectionString = Common.GetConnectionString();
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                SqlCommand sqlCommand = new SqlCommand(sqlStatement, conn);
+                conn.Open();
+                string className = "";
+                try
+                {
+                    int rowsAffected = sqlCommand.ExecuteNonQuery();
+                    SqlDataReader sqlDataReader = sqlCommand.ExecuteReader();
+                    //update, insert, delete
+                    if(rowsAffected != -1)
+                    {
+                        errorMessage = "Success. " + rowsAffected + " row(s) affected.";
+                    }
+                    //select
+                    else
+                    {
+                        pageContent += "<table>";
+                        for (int i = 0; i < sqlDataReader.FieldCount; i++)
+                        {
+                            pageContent += "<th>" + sqlDataReader.GetName(i) + "</th>";
+                        }
+                        while (sqlDataReader.HasRows && sqlDataReader.Read())
+                        {
+                            className = Common.SwitchClass(className);
+                            pageContent += "<tr class='" + className +"'>";
+                            for (int i = 0; i < sqlDataReader.FieldCount; i++)
+                            {
+                                pageContent += "<td>" + sqlDataReader[sqlDataReader.GetName(i)].ToString() + "</td>";
+                            }
+                            pageContent += "</tr>";
+                        }
+                        pageContent += "</table>";
+                    }
+                    sqlDataReader.Close();
+                    sqlDataReader.Dispose();
+                }
+                catch(SqlException exception)
+                {
+                    errorMessage = "Exception " + exception.Number + ": " + exception.Message;
+                }
+                sqlCommand.Dispose();
+                conn.Dispose();
+            }
+        }
+        else
+        {
+            errorMessage = "Insert a command.";
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function doSubmit()
+    {
+        $("#classicform").submit();
+    }
+
+    function goBack()
+    {
+        location.href = '@Menu.MAIN_PAGE';
+    }
+}
+
+@section PageContent {
+    <div align='center'>
+        <table>
+            <tr>
+                <td align="center">
+                  @Html.Raw(DrawInput.InputTextArea("cmd", Request.Form["cmd"], "5", "80", "", "", "", "nowrap='nowrap'"))<br />
+                  @Html.Raw(DrawInput.InputSubmit("btnOk", Text.OK, "button", "doSubmit();", "", ""))
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div align='center'>
+        @Html.Raw(pageContent)
+    </div>
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

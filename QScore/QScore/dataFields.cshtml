@@ -1,0 +1,205 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.mdl_Datafields_Administration;
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    string pageContent = "";
+    if ((currentId != 0) && (Modules.PermissionOr(modules, Modules.fieldsAdministratorModuleList)))
+    {
+        SessionHandler.ClearAndAddToHistory(Menu.DATA_FIELD_ADMINISTRATION);
+        pageContent = Data.GetDataFieldsList();
+        string userOptions = "";
+        if (Modules.Permission(modules, Modules.ADD_FIELDS))
+        {
+            userOptions = "<br />" + DrawInput.InputButton("newField", Text.Add + " " + Text.Field, "", "addField();", "background-image: url(./images/new.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+            userOptions += DrawInput.InputButton("newGroup", Text.Add + " " + Text.DataGroup, "", "addGroup();", "background-image: url(./images/new.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+        }
+        if (userOptions != "")
+        {
+            pageContent += "<div align='center' width='60%'>" + userOptions + "</div>";
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+
+    string kinds = "";
+    for(int i = 0; i < 12; i++)
+    {
+        kinds = Common.StrAdd(kinds, ",", Data.FriendlyName(i));
+    }
+    string newFieldContent = "";
+    newFieldContent += Text.Name + ": " + DrawInput.InputTextField("dd_name", "", "300", "", "", "width: 100%", "") + "<br />";
+    newFieldContent += Text.Kind + ": " + DrawInput.InputSelect("dd_kind", "", Common.CSVToArray("0,1,2,3,4,5,6,7,8,9,10,11"), Common.CSVToArray(kinds), "", "", "width: 100%", "");
+    newFieldContent += "<div align='center'>" + DrawInput.InputButton("saveBtn", Text.Save, "", "saveNew();", "background-image: url(./images/save.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "") +"</div>";
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function invalidateList(idG, idI)
+    {
+        showMessage(true, '@Text.WaitAMoment', "");
+        $.ajax({
+            type: "POST",
+            url: "dataFieldOrder.cshtml",
+            data: { idDG: idG, idDD: idI.toString() }
+        }).done(function(data) {
+            killAllMessages();
+            if(data != "") {
+                showMessage(true, data, "");
+            }
+        });
+    }
+
+    function editField(id)
+    {
+        navigateToURL("@Menu.DATA_FIELD_EDIT", "id", id);
+    }
+
+    function addField()
+    {
+        showDialog(true, "dialog_newFieldForm", "");
+    }
+
+    function saveNew()
+    {
+        var name = $("#dd_name").val();
+        var kind = $("#dd_kind").val();
+        if(name)
+        {
+            killAllMessages();        
+            $.ajax({
+                type: "POST",
+                url: "dataFieldNew.cshtml",
+                data: { name: name, kind: kind }
+            }).done(function(data) {
+                killAllMessages();
+                if(data != "") {
+                    var dialogId = showMessage(true, data, "");
+                    $("#" + dialogId).on("dialogclose", function(event, ui) { location.reload(); } );
+                }
+            });
+        }
+        else
+        {
+            if(name == "")
+            {
+                alert("@Text.MissingFields");
+            }
+        }
+    }
+
+    function addGroup()
+    {
+        var value = prompt("@Text.DataGroup");
+        if(value)
+        {
+            showMessage(true, '@Text.WaitAMoment', "");
+            $.ajax({
+                type: "POST",
+                url: "dataGroupInfo.cshtml",
+                data: { action: "C", name: value }
+            }).done(function(data) {
+                killAllMessages();
+                if(data != "") {
+                    var dialogId = showMessage(true, data, "");
+                    $("#" + dialogId).on("dialogclose", function(event, ui) { location.reload(); } );
+                }
+            });
+        }
+        else
+        {
+            if(value == "")
+            {
+                alert("@Text.MissingFields");
+            }
+        }
+    }
+
+    function editGroup(id, currText)
+    {
+        var value = prompt("@Text.DataGroup", currText);
+        if(value)
+        {
+            showMessage(true, '@Text.WaitAMoment', "");
+            $.ajax({
+                type: "POST",
+                url: "dataGroupInfo.cshtml",
+                data: { action: "U", name: value, id: id }
+            }).done(function(data) {
+                killAllMessages();
+                if(data != "") {
+                    var dialogId = showMessage(true, data, "");
+                    $("#" + dialogId).on("dialogclose", function(event, ui) { location.reload(); } );
+                }
+            });
+        }
+        else
+        {
+            if(value == "")
+            {
+                alert("@Text.MissingFields");
+            }
+        }
+    }
+
+    function deleteGroup(id)
+    {
+        if(confirm("@Html.Raw(Text.ConfirmDelete)"))
+        {
+            showMessage(true, '@Text.WaitAMoment', "");
+            $.ajax({
+                type: "POST",
+                url: "dataGroupInfo.cshtml",
+                data: { action: "D", id: id }
+            }).done(function(data) {
+                killAllMessages();
+                if(data != "") {
+                    var dialogId = showMessage(true, data, "");
+                    $("#" + dialogId).on("dialogclose", function(event, ui) { location.reload(); } );
+                }
+            });
+        }
+    }
+}
+
+@section PageContent {
+    @Html.Raw(pageContent)
+    <div id="dialog_newFieldForm" style="display:none;">
+        @Html.Raw(newFieldContent)
+    </div>
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

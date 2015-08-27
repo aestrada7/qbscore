@@ -1,0 +1,96 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS;
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    string action = Request.Form["action"];
+    if ((currentId != 0) && (action == "C") && (Modules.PermissionOr(modules, Modules.ADD_FIELDS + "," + Modules.DATAFIELDS_ADMINISTRATION)))
+    {
+        string name = Request.Form["name"];
+        DataGroup dataGroup = new DataGroup();
+        dataGroup.Name = name;
+        int errorCode = dataGroup.Create();
+        Context.Response.Clear();
+        if (errorCode == ErrorCode.NO_ERROR)
+        {
+            Context.Response.Write(Text.ChangesHaveBeenSaved);
+        }
+        else if(errorCode == ErrorCode.ALREADY_EXISTS)
+        {
+            Context.Response.Write(Text.ChangesNotSaved + ": " + Common.StrLang(Text.RecordXTaken, name));
+        }
+        else if(errorCode == ErrorCode.MISSING_FIELDS)
+        {
+            Context.Response.Write(Text.ChangesNotSaved + ": " + Text.MissingFields);
+        }
+        Context.Response.End();
+    }
+    else if ((currentId != 0) && (action == "U") && (Modules.PermissionOr(modules, Modules.EDIT_FIELDS + "," + Modules.DATAFIELDS_ADMINISTRATION)))
+    {
+        string id = Request.Form["id"];
+        string name = Request.Form["name"];
+        int idDataGroup = 0;
+        try
+        {
+            idDataGroup = Convert.ToInt32(id);
+        }
+        catch(FormatException ex) {}
+        if(idDataGroup != 0)
+        {
+            DataGroup dataGroup = new DataGroup(idDataGroup);
+            dataGroup.Name = name;
+            int errorCode = dataGroup.Update();
+            Context.Response.Clear();
+            if (errorCode == ErrorCode.NO_ERROR)
+            {
+                Context.Response.Write(Text.ChangesHaveBeenSaved);
+            }
+            else if (errorCode == ErrorCode.ALREADY_EXISTS)
+            {
+                Context.Response.Write(Text.ChangesNotSaved + ": " + Common.StrLang(Text.RecordXTaken, name));
+            }
+            else if (errorCode == ErrorCode.MISSING_FIELDS)
+            {
+                Context.Response.Write(Text.ChangesNotSaved + ": " + Text.MissingFields);
+            }
+            Context.Response.End();
+        }
+        else
+        {
+            Context.Response.Clear();
+            Context.Response.Write(Text.CannotPerformCommand);
+            Context.Response.End();
+        }
+    }
+    else if ((currentId != 0) && (action == "D") && (Modules.PermissionOr(modules, Modules.DELETE_FIELDS + "," + Modules.DATAFIELDS_ADMINISTRATION)))
+    {
+        string id = Request.Form["id"];
+        DataGroup dataGroup = new DataGroup(Convert.ToInt32(id));
+        int errorCode = dataGroup.Delete();
+        Context.Response.Clear();
+        if (errorCode == ErrorCode.NO_ERROR)
+        {
+            Context.Response.Write(Text.ChangesHaveBeenSaved);
+        }
+        else if (errorCode == ErrorCode.CANT_DELETE)
+        {
+            Context.Response.Write(Text.CantDelete + " " + Text.DataGroupMustBeEmpty);
+        }
+        Context.Response.End();        
+    }
+    else
+    {
+        Context.Response.Clear();
+        Context.Response.Write(Text.CannotPerformCommand);
+        Context.Response.End();
+    }
+}

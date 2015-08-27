@@ -1,0 +1,133 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.Users;
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    string pageContent = "";
+    int currentPage = 0;
+    int currentTab = 0;
+    string basicSearch = Common.SQSF(Request.Form["basicSearch"]);
+    currentPage = SessionHandler.RequestSessionInt("page");
+    currentTab = SessionHandler.RequestSessionInt("tab");
+    if (currentPage == 0)
+    {
+        currentPage = 1;
+    }
+    if ((currentId != 0) && (Modules.PermissionOr(modules, Modules.userAdministratorModuleList)))
+    {
+        SessionHandler.ClearAndAddToHistory(Menu.USER_ADMINISTRATION);
+        string fullFilters = "";
+        if(!String.IsNullOrEmpty(basicSearch))
+        {
+            fullFilters = "(Username LIKE '%" + basicSearch + "%' OR Name LIKE '%" + basicSearch + "%' OR LastName LIKE '%" + basicSearch + "%' OR MotherLastName LIKE '%" + basicSearch + "%')";
+        }
+        Data.SetExtraListUsers();
+        fullFilters = Common.StrAdd(fullFilters, " AND ", Data.GetFilters());
+        pageContent += Users.GetUserList(modules, currentPage, fullFilters);
+        string userOptions = "";
+        if (Modules.Permission(modules, Modules.ADD_USER))
+        {
+            userOptions = "<br />" + DrawInput.InputButton("newUser", Text.mdl_Add_User, "", "location.href = '" + Menu.ADD_USER + "'", "background-image: url(./images/new.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+        }
+        if (userOptions != "")
+        {
+            pageContent += "<div align='center' width='100%'>" + userOptions + "</div>";
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function showUser(id) {
+        navigateToURL("@Menu.USER_INFO", "id", id);
+    }
+
+    function showAdv() {
+        $("#searchContent").show(100);
+        $("#toAdvLink").hide(100);
+    }
+
+    function closeAdv() {
+        $("#searchContent").hide(100);
+        $("#toAdvLink").show(100);
+    }
+
+    function clearAdv() {
+        $("#clearSearch").val(1);
+        $('#classicForm').submit();
+    }
+
+    function submitForm() {
+        $("#tab").val(currentTab);
+        $('#classicForm').submit();
+    }
+}
+
+@section PageContent {
+    @{
+        //Advanced Search (initially hidden unless activated)
+        bool wasCleared = Request.Form["clearSearch"] == "1";
+        string advancedSearch = Data.BuildSearchHTML();
+        string searchDesc = Data.GetSearchDesc();
+        string classModifier = String.IsNullOrEmpty(searchDesc) && !wasCleared ? " style='display: none;'" : "";
+        //Basic Search (always available)
+        string basicModifier = String.IsNullOrEmpty(searchDesc) && !wasCleared ? "" : " style='display: none;'";
+    }
+    <div id='searchContent' class='smallText'@Html.Raw(classModifier)>
+        <span class='titleMid'>@Text.AdvancedSearch</span><br />
+        @Html.Raw(advancedSearch)
+        <center>@Html.Raw(DrawInput.InputButton("advSearch", Text.DoSearch, "", "submitForm();", "", ""))&nbsp;@Html.Raw(DrawInput.InputButton("clearAdvSearch", Text.Clear, "", "clearAdv();", "", ""))&nbsp;@Html.Raw(DrawInput.InputButton("closeAdvSearch", Text.Cancel, "", "closeAdv();", "", ""))</center></div>
+        @Html.Raw(searchDesc)
+    </div>
+    <div id='searchBasic' style='width: 100%; text-align: right;'>
+        <span>@Text.QuickSearch:</span>
+        @Html.Raw(DrawInput.InputTextField("basicSearch", basicSearch, "100", "", "", "", "placeholder='" + Text.QuickSearch + "'"))&nbsp;
+        @Html.Raw(DrawInput.InputSubmit("btnBSearch", Text.DoSearch, "", "", "", ""))
+        <br />
+        <a id="toAdvLink" href="#" onclick="showAdv();" class="dark"@Html.Raw(basicModifier)>@Text.ShowAdvancedSearch</a>
+    </div>
+    @Html.Raw(pageContent)
+    <input type="hidden" id="page" name="page" value="@currentPage" />
+    <input type="hidden" id="tab" name="tab" value="@currentTab" />
+    <input type="hidden" id="clearSearch" name="clearSearch" value="" />
+    <script type="text/javascript">
+        currentTab = @currentTab;
+    </script>
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

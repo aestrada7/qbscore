@@ -1,0 +1,316 @@
+@using System.Configuration;
+
+@functions
+{
+  public string Gradient(string gStart, string gEnd)
+  {
+      string strout = "";
+      strout += "background: '" + gEnd + "'; /* IE 6 */";
+      strout += "filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='" + gStart + "', endColorstr='" + gEnd + "',GradientType=0 ); /* IE7,IE8,IE9 */";
+      strout += "background-image: -webkit-gradient(linear, 0% 0%, 0% 100%, from(rgb(" + Convert.ToInt32(gStart.Substring(1, 2), 16) + ", " + Convert.ToInt32(gStart.Substring(3, 2), 16) + ", " + Convert.ToInt32(gStart.Substring(5, 2), 16) + ")), to(rgb(" + Convert.ToInt32(gEnd.Substring(1, 2), 16) + ", " + Convert.ToInt32(gEnd.Substring(3, 2), 16) + ", " + Convert.ToInt32(gEnd.Substring(5, 2), 16) + "))); /* Chrome, Safari */";
+      strout += "background-image: -ms-linear-gradient(top, " + gStart + " 0%, " + gEnd + " 100%); /* IE10 */";
+      strout += "background-image: -moz-linear-gradient(top, " + gStart + " 0%, " + gEnd + " 100%); /* Firefox */";
+      return strout;
+  }
+}
+
+@{
+    Response.ContentType = "text/css";
+
+    string BodyGradientStart = "#FFFFFF";
+    string BodyGradientEnd = "#FFFFFF";
+    string MainTextColor = "#666";
+    string TitleTextColor = "#333";
+    string FontSize = "12px";
+    string BiggerFontSize = "16px";
+    string TitleFontSize = "36px";
+    string DarkBackgroundLink = "#FFFFFF";
+    string DarkBackgroundLinkHover = "#EAEAEA";
+    string CellDarkBackground = "#FFFFFF";
+    string CellLightBackground = "#FFFFFF";
+    string CellDarkHover = "#E9F6FC";
+    string CellLightHover = "#E9F6FC";
+    string CellTitleBackground = "#1E82CC";
+    string CellTitleDarkBackground = "#0D71BB";
+    string Divisions = "#CCCCCC";
+    
+    string MainFont = "Segoe UI,Arial Narrow,Sans-Serif";
+    string AlternateFont = "Segoe UI Light,Helvetica,Arial,Sans-Serif";
+    string TableTitleFont = "Segoe UI Semibold,Arial";
+}
+
+body
+{
+    @Html.Raw(Gradient(BodyGradientStart, BodyGradientEnd));
+    font-family: @MainFont;
+    font-size: @FontSize !important;
+    color: @MainTextColor;
+    margin: 0px;
+}
+
+table
+{
+    font-size: @FontSize !important;
+}
+
+.title
+{
+    font-family: @AlternateFont;
+    color: @TitleTextColor;
+    font-size: @TitleFontSize;
+}
+
+.titleMid
+{
+    font-family: @AlternateFont;
+    color: @TitleTextColor;
+    font-size: @BiggerFontSize;
+    line-height: 30px;
+}
+
+.smallText
+{
+    font-size: @FontSize;
+}
+
+.biggerText
+{
+    font-size: @BiggerFontSize;
+}
+
+.alert
+{
+  border: 1px solid #FFE6BF;
+  margin: 10px 0px;
+  padding: 15px 10px 15px 50px;
+  background: #FFFBE5;
+  color: #CE6D12;
+  font-family: @MainFont;
+  font-size: @FontSize;
+}
+
+.cellDark
+{
+  background-color: @CellDarkBackground;
+  font-size: @FontSize;
+  height: 25px;
+}
+
+.cellDark:hover
+{
+  background-color: @CellDarkHover;
+  cursor: pointer;
+}
+
+.cellLight
+{
+  background-color: @CellLightBackground;
+  font-size: @FontSize;
+  height: 25px;
+}
+
+.cellLight:hover
+{
+  background-color: @CellLightHover;
+  cursor: pointer;
+}
+
+.cellSelected
+{
+  background-color: @CellLightHover;
+  cursor: pointer;
+}
+
+.cellTitle
+{
+  background-color: @BodyGradientEnd;
+  color: @TitleTextColor;
+  font-family: @TableTitleFont;
+  font-weight: lighter;
+  text-transform: uppercase;
+  font-size: @FontSize;
+  border-left: 1px solid @Divisions;
+  border-right: 1px solid @Divisions;
+  border-bottom: 2px solid @Divisions;
+}
+
+th
+{
+  background-color: @BodyGradientEnd;
+  color: @TitleTextColor;
+  font-family: @TableTitleFont;
+  font-weight: lighter;
+  text-transform: uppercase;
+  font-size: @FontSize;
+  border-left: 1px solid @Divisions;
+  border-right: 1px solid @Divisions;
+  border-bottom: 2px solid @Divisions;
+}
+
+th.blue
+{
+  background-color: @CellTitleBackground;
+  color: @DarkBackgroundLink;
+  font-family: @MainFont;
+  font-weight: normal;
+}
+
+.pagination
+{
+  font-size: @FontSize;
+  padding: 5px;
+  border-top: 1px solid @Divisions;
+  border-bottom: 1px solid @Divisions;
+}
+
+.innerMenu
+{
+  background-color: @CellTitleBackground;
+  color: @DarkBackgroundLink;
+  height: 35px;
+}
+
+.innerMenuOption
+{
+  padding: 5px;
+}
+
+.innerMenuOption:hover
+{
+  background-color: @CellTitleDarkBackground;
+}
+
+a
+{
+  color: @DarkBackgroundLink;
+  text-decoration: none;
+}
+
+a:active
+{
+  color: @DarkBackgroundLink;
+  text-decoration: none;
+}
+
+a:hover
+{
+  color: @DarkBackgroundLinkHover;
+  text-decoration: none;
+}
+
+a:visited:
+{
+  color: @DarkBackgroundLink;
+  text-decoration: none;
+}
+
+a.dark
+{
+  color: @MainTextColor;
+  text-decoration: none;
+}
+
+a.dark:active
+{
+  color: @CellTitleBackground;
+  text-decoration: none;
+}
+
+a.dark:hover
+{
+  color: @CellTitleBackground;
+  text-decoration: none;
+}
+
+a:visited:
+{
+  color: @MainTextColor;
+  text-decoration: none;
+}
+
+.boxTitle
+{
+    font-family: @AlternateFont;
+    font-size: 32px;
+    color: #FFFFFF;
+}
+
+.boxText
+{
+    font-size: 14px;
+    color: #FFFFFF;
+}
+
+input[type=text],
+input[type=url],
+input[type=tel],
+input[type=number],
+input[type=color],
+input[type=email],
+input[type=password],
+input[type=file],
+textarea
+{
+    border: 1px solid @Divisions;
+    padding: 3px;
+    font-family: @MainFont;
+    font-size: 14px;
+}
+
+input[type=text]:hover,
+input[type=url]:hover,
+input[type=tel]:hover,
+input[type=number]:hover,
+input[type=color]:hover,
+input[type=email]:hover,
+input[type=password]:hover,
+input[type=file]:hover,
+textarea:hover {
+    border-color: #8f8f8f;
+}
+
+select
+{
+    padding: 3px;
+    font-family: @MainFont;
+    font-size: 14px;
+}
+
+select:hover
+{
+    border-color: #8f8f8f;
+}
+
+.errorItem
+{
+    border-color: #CC0000 !important;
+    background-color: #FFEEEE !important;
+}
+
+.moveIcon
+{
+    position: absolute; 
+}
+
+.sort-placeholder
+{ 
+    border-color: #8f8f8f;
+    background-color: #EFEFEF;
+    height: 32px;
+    line-height: 22px;
+}
+
+.required
+{
+    font-weight: bold;
+}
+
+.tile
+{
+    position: relative;
+    display: inline-block;
+    width: 150px;
+    height: 150px;
+    top: 0;
+    color: #FFFFFF;
+}

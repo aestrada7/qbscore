@@ -1,0 +1,158 @@
+﻿@using System.Data;
+@using System.Drawing;
+@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS.IO;
+@using QBS.Exams;
+@using QBS;
+@using OfficeOpenXml;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.mdl_Eval_Reports;
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    int currentPage = 0;
+    int currentTab = 0;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+    currentPage = SessionHandler.RequestSessionInt("page");
+    currentTab = SessionHandler.RequestSessionInt("tab");
+    if (currentPage == 0)
+    {
+        currentPage = 1;
+    }
+
+    string pageContent = "";
+    if ((currentId != 0) && (Modules.Permission(modules, Modules.EVAL_REPORTS)))
+    {
+        Data.SetExtraListUsers();
+        Data.SetExtraExam(true);
+        string fullFilters = Data.GetFilters();
+
+        if (Request.Form["cmd"] == "exp")
+        {
+            ImportExport importExport = new ImportExport();
+            DataTable dataTable = importExport.ExportDataExam(fullFilters);
+
+            try
+            {
+                using (ExcelPackage excel = new ExcelPackage())
+                {
+                    ExcelWorksheet sheet = excel.Workbook.Worksheets.Add(Text.mdl_Eval_Reports);
+                    int i = 1;
+                    foreach (string columnName in importExport.ColumnTitles)
+                    {
+                        sheet.Cells[1, i].Value = columnName;
+                        sheet.Cells[1, i].Style.Font.Bold = true;
+                        sheet.Cells[1, i].Style.Font.Color.SetColor(Color.White);
+                        sheet.Cells[1, i].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        sheet.Cells[1, i].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0x780077CC));
+                        i++;
+                    }
+                    sheet.Cells["A2"].LoadFromDataTable(dataTable, false);
+                    sheet.Cells.Style.Font.Name = "Segoe UI";
+                    sheet.Cells.AutoFitColumns();
+                    Response.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                    string date = DateTime.Now.Year.ToString() + DateTime.Now.Month.ToString().PadLeft(2, '0');
+                    date += DateTime.Now.Day.ToString().PadLeft(2, '0') + "_" + DateTime.Now.Hour.ToString().PadLeft(2, '0');
+                    date += DateTime.Now.Minute.ToString().PadLeft(2, '0') + DateTime.Now.Second.ToString().PadLeft(2, '0');
+                    Response.AddHeader("content-disposition", "attachment; filename=qbsExams_" + date + ".xlsx");
+                    Response.BinaryWrite(excel.GetAsByteArray());
+                    Response.End();
+                }
+            }
+            catch (Exception ex) { }
+        }
+        else
+        {
+            SessionHandler.ClearAndAddToHistory(Menu.EVAL_RESULTS);
+            pageContent += Exams.GetReportList(currentPage, fullFilters);
+            string userOptions = "";
+            userOptions = "<br />" + DrawInput.InputButton("export", Text.Export, "", "doExport();", "background-image: url(./images/save.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+            pageContent += "<div align='center' width='100%'>" + userOptions + "</div>";
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function detail(id) {
+        navigateToURL("@Menu.EVAL_RESULTS_DETAIL", "id", id);
+    }
+
+    function exam(idUE) {
+        navigateToURL("@Menu.EVAL_EXAM", "idUE", idUE);
+    }
+
+    function doExport() {
+        freezeBlocker();
+        $('#cmd').val("exp");
+        showMessage(true, "@Text.PleaseWait", "");
+        $('#classicForm').submit();
+    }
+
+    function submitForm() {
+        $('#cmd').val("");
+        $("#tab").val(currentTab);
+        $('#classicForm').submit();
+    }
+
+    function clearAdv() {
+        $('#cmd').val("");
+        $("#clearSearch").val(1);
+        $('#classicForm').submit();
+    }
+}
+
+@section PageContent {
+    @{
+        string advancedSearch = Data.BuildSearchHTML();
+        string searchDesc = Data.GetSearchDesc();
+    }
+    <div id='searchContent' class='smallText'>
+        <span class='titleMid'>@Text.Search</span><br />
+        @Html.Raw(advancedSearch)
+        <center>@Html.Raw(DrawInput.InputButton("advSearch", Text.DoSearch, "", "submitForm();", "", ""))&nbsp;@Html.Raw(DrawInput.InputButton("clearAdvSearch", Text.Clear, "", "clearAdv();", "", ""))</center>
+        @Html.Raw(searchDesc)
+    </div>
+    @Html.Raw(pageContent)
+    <br />
+    <input type="hidden" id="cmd" name="cmd" value="" />
+    <input type="hidden" id="page" name="page" value="@currentPage" />
+    <input type="hidden" id="tab" name="tab" value="@currentTab" />
+    <input type="hidden" id="clearSearch" name="clearSearch" value="" />
+    <script type="text/javascript">
+        currentTab = @currentTab;
+    </script>
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

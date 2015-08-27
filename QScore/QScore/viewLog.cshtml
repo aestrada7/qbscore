@@ -1,0 +1,61 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/LayoutPopup.cshtml";
+    string title = Text.Detail;
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    string pageContent = "";
+    int idLog = 0;
+    QBSLog qbsLog = new QBSLog();
+    try
+    {
+        idLog = Convert.ToInt32(Request.Form["idLog"]);
+    }
+    catch(Exception ex) { }
+
+    if(idLog == 0)
+    {
+        errorMessage = Text.Error + " " + Text.InvalidData;
+    }
+    else
+    {
+        qbsLog = new QBSLog(idLog);
+        pageContent = qbsLog.Content;
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { @Html.Raw(qbsLog.Name) }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section PageContent {
+    <table align="center" width="60%">
+        <tr>
+            <td>
+                @Html.Raw(pageContent)
+            </td>
+        </tr>
+    </table>
+    <center>@Html.Raw(DrawInput.InputButton("btnClose", Text.Close, "button", "killAllMessages();", "font-size: 12px;", ""))</center>
+}

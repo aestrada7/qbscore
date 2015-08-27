@@ -1,0 +1,59 @@
+﻿@using System.Configuration;
+@using Aexis;
+@using QBS;
+
+@{
+    string Title = Config.AppName();
+    string PageTitle = RenderSection("PageTitle", false).ToHtmlString();
+    string Menu = RenderSection("Menu", false).ToHtmlString();
+}
+
+<!DOCTYPE html />
+
+<html>
+<head>
+    <title>@Title - @PageTitle</title>
+    <link href="./layouts/Standard/Main.css.cshtml" rel="Stylesheet" type="text/css" />
+    <link href="./layouts/Standard/jquery-ui.css" rel="Stylesheet" type="text/css" />
+    <script type="text/javascript" src="js/jquery-1.7.1.min.js"></script>
+    <script type="text/javascript" src="js/jquery-ui.custom.js"></script>
+    <script type="text/javascript" src="js/layout.js"></script>
+    <script type="text/javascript" src="js/jquery.sticky.js"></script>
+    <script type="text/javascript">
+        @RenderSection("JavaScript", false)
+    </script>
+</head>
+<body>
+    <div id="loading" style="text-align: center; display: none;">
+        <img src="images/loading.gif" />
+    </div>
+    <form id="classicForm" method="post" action="@Request.Url">
+        @{
+            if(!String.IsNullOrEmpty(Menu))
+            {
+                <div style="width: 100%; background-color: #333333;">
+                    <table width="90%" align="center">
+                        <tr>
+                            @Html.Raw(Menu)
+                        </tr>
+                    </table>
+                </div>
+            }
+        }
+        <table width="70%" align="center">
+            <tr>
+                <td width="70%" class="title">&nbsp;</td>
+            </tr>
+            <tr>
+                <td colspan="3">
+                    @RenderSection("Errors")
+                    @RenderSection("PageContent")
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3" style="text-align: right;" class="smallText"><div style="border-top: 1px solid #CCCCCC;">© @DateTime.Now.Year QBSoluciones</div></td>
+            </tr>
+        </table>
+    </form>
+</body>
+</html>

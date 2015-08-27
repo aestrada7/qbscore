@@ -1,0 +1,231 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using System.Globalization;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.Users;
+    string errorMessage = "";
+    string subtitle = "";
+    bool isSelfInfo = false;
+    User user = new User();
+}
+
+@* Page Code *@
+@{
+    int userId = 0;
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    string pageContent = "";
+    try
+    {
+        isSelfInfo = Convert.ToInt32(Request.Form["self"]) == 1 ? true : false;
+    }
+    catch(FormatException ex) {}
+    if ((currentId != 0) && ((Modules.PermissionOr(modules, Modules.userAdministratorModuleList)) || (isSelfInfo)))
+    {
+        try
+        {
+            userId = Convert.ToInt32(Request.Form["id"]);
+        }
+        catch(FormatException ex) {}
+        user = new User(userId);
+        string command = Request["cmd"];
+        if(command == "S")
+        {
+            bool canSave = !isSelfInfo && Modules.Permission(modules, Modules.USER_ADMINISTRATION);
+            canSave = (canSave) || (isSelfInfo && Modules.Permission(modules, Modules.EDIT_SELF_INFO));
+            if(canSave)
+            {
+                int errorCode = 0;
+                user.Name = Request.Form["name"];
+                user.LastName = Request.Form["lastName"];
+                user.MotherLastName = Request.Form["motherLastName"];
+                if (!isSelfInfo && Modules.Permission(modules, Modules.USER_ADMINISTRATION))
+                {
+                    if (currentId != userId)
+                    {
+                        try
+                        {
+                            user.Status = Convert.ToInt32(Request.Form["status"]);
+                        }
+                        catch(FormatException ex) {}
+                    }                    
+                }
+                if (!isSelfInfo && Modules.Permission(modules, Modules.USER_ADMINISTRATION) && Modules.Permission(modules, Modules.ROLE_CATALOG))
+                {
+                    if(currentId != userId)
+                    {
+                        try
+                        {
+                            user.IdRole = Convert.ToInt32(Request.Form["role"]);
+                        }
+                        catch(FormatException ex) {}
+                    }
+                }
+                if (!isSelfInfo && Modules.Permission(modules, Modules.USER_ADMINISTRATION) && Modules.Permission(modules, Modules.EDIT_PASSWORDS))
+                {
+                    string newPwd = Request.Form["passwordNew"];
+                    if(!String.IsNullOrEmpty(newPwd))
+                    {
+                        user.Password = newPwd;
+                    }
+                }
+                errorCode = user.Update();
+                if(errorCode == ErrorCode.NO_ERROR)
+                {
+                    errorMessage = Text.ChangesHaveBeenSaved;
+                    user = new User(userId);
+                    command = "";
+                }
+                else if(errorCode == ErrorCode.INVALID_FIELDS)
+                {
+                    errorMessage = user.userFieldsError;
+                }
+            }
+            else
+            {
+                errorMessage = Text.CannotPerformCommand;
+            }
+        }
+        else if(command == "D")
+        {
+            if (Modules.Permission(modules, Modules.USER_ADMINISTRATION))
+            {
+                user.Delete();
+                Response.Redirect(SessionHandler.LastPageFromHistory());
+            }
+            else
+            {
+                errorMessage = Text.CannotPerformCommand;
+            }
+        }
+        title = user.Name + " " + user.LastName + " " + user.MotherLastName;
+        pageContent = user.GetUserFields(isSelfInfo);
+        string userOptions = "";
+        if (isSelfInfo && Modules.Permission(modules, Modules.EDIT_SELF_INFO))
+        {
+            userOptions = DrawInput.InputButton("saveBtn", Text.Save, "", "doSave();", "background-image: url(./images/save.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+        }
+        if (!isSelfInfo && Modules.Permission(modules, Modules.EDIT_USER))
+        {
+            userOptions = DrawInput.InputButton("saveBtn", Text.Save, "", command != "N" ? "doSave();" : "doNew();", "background-image: url(./images/save.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+        }
+        if (Modules.Permission(modules, Modules.DELETE_USER))
+        {
+            userOptions = Common.StrAdd(userOptions, "&nbsp;", DrawInput.InputButton("deleteBtn", Text.Delete, "", "doDelete();", "background-image: url(./images/delete.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", ""));
+        }
+        userOptions = Common.StrAdd(userOptions, "&nbsp;", DrawInput.InputButton("backBtn", Text.Back, "", "goBack();", "background-image: url(./images/back.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", ""));
+        if (userOptions != "")
+        {
+            pageContent += "<div align='center' width='100%'>" + userOptions + "</div>";
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section ExtraIncludes {
+    <script type="text/javascript" src="js/jquery.sceditor.bbcode.js"></script>
+    <script type="text/javascript" src="js/jquery.sceditor.@CultureInfo.CurrentCulture.ToString()_lang.js"></script>
+    <link href="css/themes/square.css" rel="Stylesheet" type="text/css" />
+}
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+@section BackButtonAddress { @SessionHandler.LastPageFromHistory() }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function goBack()
+    {
+        location.href = '@SessionHandler.LastPageFromHistory()';
+    }
+
+    function doDelete()
+    {
+        if(confirm("@Html.Raw(Text.ConfirmDelete)"))
+        {
+            $('#cmd').val('D');
+            $('#classicForm').submit();
+        }
+    }
+
+    function doSave()
+    {
+        $('#cmd').val('S');
+        $('#classicForm').submit();
+    }
+
+    function validate() {}
+}
+
+@section PageContent {
+    <table width="70%" border="0" align="center">
+        <tr>
+            <td align="right" width="40%">@Html.Raw(Text.Username):</td>
+            <td align="left" width="60%">@Html.Raw(user.Username)</td>
+        </tr>
+        <tr>
+            <td align="right" width="40%">@Html.Raw(Text.Name):</td>
+            <td align="left" width="60%">@Html.Raw(DrawInput.InputTextField("name", user.Name, "50", "", "", "width: 80%;", ""))</td>
+        </tr>
+        <tr>
+            <td align="right" width="40%">@Html.Raw(Text.LastName):</td>
+            <td align="left" width="60%">@Html.Raw(DrawInput.InputTextField("lastName", user.LastName, "50", "", "", "width: 80%;", ""))</td>
+        </tr>
+        <tr>
+            <td align="right" width="40%">@Html.Raw(Text.MotherLastName):</td>
+            <td align="left" width="60%">@Html.Raw(DrawInput.InputTextField("motherLastName", user.MotherLastName, "50", "", "", "width: 80%;", ""))</td>
+        </tr>
+        @if(!isSelfInfo && Modules.Permission(modules, Modules.USER_ADMINISTRATION))
+        {
+        <tr>
+            <td align="right" width="40%">@Html.Raw(Text.Status):</td>
+            <td align="left" widtH="60%">@Html.Raw(DrawInput.InputSelect("status", user.Status.ToString(), "0,1,2", "#INACTIVE#,#ACTIVE#,#BLOCKED#", "", "", "width: 80%;", "").Replace("#INACTIVE#", Text.Inactive).Replace("#ACTIVE#", Text.Active).Replace("#BLOCKED#", Text.Blocked))</td>
+        </tr>
+        }
+        @if(!isSelfInfo && Modules.Permission(modules, Modules.USER_ADMINISTRATION) && Modules.Permission(modules, Modules.ROLE_CATALOG))
+        {
+        <tr>
+            <td align="right" width="40%">@Html.Raw(Text.UserRole):</td>
+            <td align="left" widtH="60%">@Html.Raw(DrawInput.InputSelect("role", user.IdRole.ToString(), "Roles", "IdRole", "Role", "", "", "", "width: 80%;", "").Replace("#ADMINISTRATOR#", Text.role_Administrator).Replace("#USER#", Text.role_User))</td>
+        </tr>
+        }
+        @if(!isSelfInfo && Modules.Permission(modules, Modules.USER_ADMINISTRATION) && Modules.Permission(modules, Modules.EDIT_PASSWORDS))
+        {
+        <tr>
+            <td align="right" width="40%">@Html.Raw(Text.ResetPasswordTo):</td>
+            <td align="left" width="60%">@Html.Raw(DrawInput.InputTextField("passwordNew", "", "50", "", "", "width: 80%;", ""))</td>
+        </tr>            
+        }
+    </table>
+    @Html.Raw(pageContent)
+    <input type="hidden" id="cmd" name="cmd" />
+    <input type="hidden" id="id" name="id" value="@userId" />
+    <input type="hidden" id="self" name="self" value="@Convert.ToInt32(isSelfInfo)" />
+    @Html.Raw(Web.MakeWYSIWYG())
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

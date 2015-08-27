@@ -1,0 +1,35 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Exams;
+@using QBS;
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+    string pageContent = "";
+    
+    if ((currentId != 0) && (Modules.Permission(modules, Modules.EVAL_EXAM_CATALOG)))
+    {
+        try
+        {
+            int idExam = Convert.ToInt32(Request.Form["idExam"]);
+            int idTheme = ExamThemes.GetThemeIdFromTree(Request.Form["idTheme"]);
+            
+            Context.Response.Clear();
+            Context.Response.Write(ExamQuestions.GetQuestionList(modules, 0, "ExamQuestion.IdTheme = " + idTheme + " AND ExamQuestion.Status = " + ExamQuestionStatus.ACTIVE + " AND ExamQuestion.IdQuestion NOT IN (SELECT IdQuestion FROM ExamContent WHERE IdExam = " + idExam + ")", true));
+            Context.Response.End();
+        }
+        catch(FormatException ex) { }
+    }
+    else
+    {
+        Context.Response.Clear();
+        Context.Response.Write(Text.CannotPerformCommand);
+        Context.Response.End();
+    }
+}

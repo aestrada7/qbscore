@@ -1,0 +1,392 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using System.Globalization;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS.Exams;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.Exam;
+    string errorMessage = "";
+    string subtitle = "";
+    Exam exam = new Exam();
+}
+
+@* Page Code *@
+@{
+    int examId = 0;
+    int currentTab = SessionHandler.RequestSessionInt("tab"); ;
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    bool hasQuestions = false;
+    bool hasThemes = false;
+    bool canEdit = false;
+    string pageContent = "";
+    if ((currentId != 0) && (Modules.PermissionOr(modules, Modules.examAdministratorModuleList)))
+    {
+        try
+        {
+            examId = Convert.ToInt32(Request.Form["id"]);
+        }
+        catch(FormatException ex) {}
+        exam = new Exam(examId);
+        canEdit = Common.GetBDNum("HowMany", "SELECT COUNT(*) AS HowMany FROM UserExam WHERE IdExam = " + examId + " AND Status <> " + UserExamStatus.PENDING) == 0;
+        if (!canEdit)
+        {
+            errorMessage = Text.ExamHasBeenUsedCantBeEdited;
+        }
+        string command = Request["cmd"];
+        if (command == "S")
+        {
+            int errorCode = 0;
+            exam.ExamName = Request.Form["examName"];
+            exam.MasteryScore = Convert.ToInt32(Request.Form["masteryScore"]);
+            exam.Shuffle = Convert.ToInt32(Request.Form["shuffle"]);
+            exam.SelfEnroll = Convert.ToInt32(Request.Form["selfEnroll"]);
+            exam.Status = Convert.ToInt32(Request.Form["status"]);
+            exam.QuestionsPerPage = Convert.ToInt32(Request.Form["questionsPerPage"]);
+            exam.MaxMins = Convert.ToInt32(Request.Form["maxMins"]);
+            exam.Instructions = Request.Form["instructions"];
+
+            if (examId != 0)
+            {
+                errorCode = exam.Update();
+            }
+            else
+            {
+                errorCode = exam.Create();
+                examId = exam.IdExam;
+            }
+            if (errorCode == ErrorCode.NO_ERROR)
+            {
+                //new options
+                //try
+                //{
+                //    string[] newPoints = Common.CSVToArray('|', Request.Form["newOptionsPoints"]);
+                //    for (int i = 1; i <= Convert.ToInt32(Request.Form["newOptionsTotal"]); i++)
+                //    {
+                //        ExamOption option = new ExamOption();
+                //        option.IdQuestion = questionId;
+                //        option.OptionText = Request.Form["added_" + i];
+                //        option.Points = Convert.ToInt32(newPoints[i - 1]);
+                //        option.Create();
+                //    }
+                //}
+                //catch(FormatException ex) { }
+                errorMessage = Text.ChangesHaveBeenSaved;
+                exam = new Exam(examId);
+                command = "";
+            }
+            else if (errorCode == ErrorCode.MISSING_FIELDS)
+            {
+                errorMessage = Text.MissingFields;
+                command = "";
+            }
+            else if (errorCode == ErrorCode.ALREADY_EXISTS)
+            {
+                errorMessage = Text.ChangesNotSaved + ": " + Common.StrLang(Text.RecordXTaken, exam.ExamName);
+                command = "";
+            }
+            else if (errorCode == ErrorCode.CANT_MODIFY)
+            {
+                errorMessage = Text.ChangesNotSaved;
+                command = "";
+            }
+        }
+        else if (command == "D")
+        {
+            if (Modules.Permission(modules, Modules.EVAL_EXAM_CATALOG_DELETE))
+            {
+                int errorCode = exam.Delete();
+                if (errorCode == ErrorCode.NO_ERROR)
+                {
+                    Response.Redirect(SessionHandler.LastPageFromHistory());
+                }
+                else if (errorCode == ErrorCode.CANT_DELETE)
+                {
+                    errorMessage = Text.CantDelete;
+                }
+            }
+            else
+            {
+                errorMessage = Text.CannotPerformCommand;
+            }
+        }
+        string extraAttribs = canEdit ? "" : " readonly='readonly'";
+        pageContent = "<div id='tabNav'><ul><li><a href='#tabs1'>" + Text.Configuration + "</a></li><li><a href='#tabs2'>" + Text.Sections + "</a></li></ul>";
+        pageContent += "<div id='tabs1'><table width='70%' border='0' align='center'>";
+        pageContent += "<tr><td align='right' width='40%'>" + Text.Exam + ":</td>";
+        pageContent += "<td align='left' width='60%'>" + DrawInput.InputTextField("examName", exam.ExamName, "", "", "", "width: 80%;", "") + "</td></tr>";
+        pageContent += "<tr><td align='right' width='40%'>" + Text.MasteryScore + ":</td>";
+        pageContent += "<td align='left' width='60%'>" + DrawInput.InputTextField("masteryScore", exam.MasteryScore.ToString(), "2", "", "validateInt($(this), event, 0, 100);", "width: 30px;", extraAttribs) + "</td></tr>";
+        pageContent += "<tr><td align='right' width='40%'>" + Text.ShuffleQuestions + ":</td>";
+        pageContent += "<td align='left' width='60%'>" + DrawInput.InputCheckbox("shuffle", exam.Shuffle.ToString(), (exam.Shuffle == 1), "", "", "", "onChange='toggleCheckbox($(this));'" + " " + extraAttribs) + "</td></tr>";
+        pageContent += "<tr><td align='right' width='40%'>" + Text.AllowSelfEnroll + ":</td>";
+        pageContent += "<td align='left' width='60%'>" + DrawInput.InputCheckbox("selfEnroll", exam.SelfEnroll.ToString(), (exam.SelfEnroll == 1), "", "", "", "onChange='toggleCheckbox($(this));'" + " " + extraAttribs) + "</td></tr>";
+        pageContent += "<tr><td align='right' width='40%'>" + Text.Active + ":</td>";
+        pageContent += "<td align='left' width='60%'>" + DrawInput.InputCheckbox("status", exam.Status.ToString(), (exam.Status == ExamStatus.ACTIVE), "", "", "", "onChange='toggleCheckbox($(this));'") + "</td></tr>";
+        pageContent += "<tr><td align='right' width='40%'>" + Text.QuestionsPerPage + ":</td>";
+        pageContent += "<td align='left' width='60%'>" + DrawInput.InputTextField("questionsPerPage", exam.QuestionsPerPage.ToString(), "2", "", "validateInt($(this), event, 0, 100);", "width: 30px;", extraAttribs) + "</td></tr>";
+        pageContent += "<tr><td align='right' width='40%'>" + Text.MaxMins + ":</td>";
+        pageContent += "<td align='left' width='60%'>" + DrawInput.InputTextField("maxMins", exam.MaxMins.ToString(), "3", "", "validateInt($(this), event, 0, 900);", "width: 40px;", extraAttribs) + " " + Text.WontBeUsedIfZero + "</td></tr>";
+        pageContent += "<tr><td align='right' width='40%'>" + Text.Instructions + ":</td>";
+        pageContent += "<td align='left' width='60%'>" + DrawInput.InputTextArea("instructions", exam.Instructions, "4", "", "", "", "width: 100%;", "") + "</td></tr>";
+        pageContent += "</table></div>";
+        pageContent += "<div id='tabs2'>";
+        pageContent += "<table id='sort' width='90%' border='0' align='center'>";
+        string className = "";
+        int i = 0;
+        string pageContentTemp = "";
+        foreach (ExamContent examContent in exam.examContents)
+        {
+            i++;
+            className = Common.SwitchClass(className);
+            //Theme
+            if (examContent.IdTheme != 0)
+            {
+                pageContentTemp += "<tr id='t_" + examContent.IdExamContent + "' class='" + className + "' onClick='editSection(" + examContent.IdExamContent + ");'>";
+                pageContentTemp += "<td align='center'>" + i + "</td>";
+                hasThemes = true;
+                ExamTheme theme = new ExamTheme(examContent.IdTheme);
+                pageContentTemp += "<td>" + Text.Theme + "</td>";
+                pageContentTemp += "<td>" + theme.Theme + "</td>";
+                pageContentTemp += "<td align='center'>" + examContent.QuestionCount + "</td>";
+            }
+            //Questions
+            else
+            {
+                pageContentTemp += "<tr id='q_" + examContent.IdExamContent + "' class='" + className + "'>";
+                pageContentTemp += "<td align='center'>" + i + "</td>";
+                hasQuestions = true;
+                ExamQuestion question = new ExamQuestion(examContent.IdQuestion);
+                pageContentTemp += "<td>" + Text.Question + "</td>";
+                pageContentTemp += "<td>" + Common.BBCodeToHTML(question.Question) + "</td>";
+                pageContentTemp += "<td>" + (canEdit ? "<a class='darkLink' href='#' onClick='deleteQ(" + examContent.IdExamContent + "); return false;'>" + Text.Delete + "</a>" : "&nbsp;") + "</td>";
+            }
+            pageContentTemp += "</tr>";
+        }
+        pageContent += "<thead><tr><th width='5%'>#</th><th width='5%'>" + Text.Kind + "</th><th width='80%'>" + Text.Theme + "/" + Text.Question + "</th><th width='10%'>" + (hasQuestions ? Text.Options : Text.NumberOfQuestions) + "</th></tr></thead>";
+        pageContent += "<tbody>" + pageContentTemp + "</tbody>";
+        pageContent += "</table>";
+        if ((Modules.Permission(modules, Modules.EVAL_EXAM_CATALOG_EDIT)) && canEdit)
+        {
+            pageContent += "<div align='center'>";
+            if (!hasQuestions)
+            {
+                pageContent += DrawInput.InputButton("addSect", Text.Add + " " + Text.Theme, "", "addSection(1);", "background-image: url(./images/new.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+            }
+            if (!hasThemes)
+            {
+                pageContent += "&nbsp;" + DrawInput.InputButton("addSectQ", Text.Add + " " + Text.Question_s, "", "addSection(0);", "background-image: url(./images/new.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+            }
+            pageContent += "</div>";
+        }
+        pageContent += "</div></div>";
+        string userOptions = "";
+        if (Modules.Permission(modules, Modules.EVAL_EXAM_CATALOG_EDIT))
+        {
+            userOptions = DrawInput.InputButton("saveBtn", Text.Save, "", "doSave();", "background-image: url(./images/save.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+        }
+        if (Modules.Permission(modules, Modules.EVAL_EXAM_CATALOG_DELETE) && command != "N" && canEdit)
+        {
+            userOptions = Common.StrAdd(userOptions, "&nbsp;", DrawInput.InputButton("deleteBtn", Text.Delete, "", "doDelete();", "background-image: url(./images/delete.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", ""));
+        }
+        userOptions = Common.StrAdd(userOptions, "&nbsp;", DrawInput.InputButton("backBtn", Text.Back, "", "goBack();", "background-image: url(./images/back.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", ""));
+        if (userOptions != "")
+        {
+            pageContent += "<div align='center' width='100%'>" + userOptions + "</div>";
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section ExtraIncludes {
+    <script type="text/javascript" src="js/jquery.sceditor.bbcode.js"></script>
+    <script type="text/javascript" src="js/jquery.sceditor.@CultureInfo.CurrentCulture.ToString()_lang.js"></script>
+    <link href="css/themes/square.css" rel="Stylesheet" type="text/css" />
+}
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+@section BackButtonAddress { @SessionHandler.LastPageFromHistory() }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function goBack() {
+        location.href = '@SessionHandler.LastPageFromHistory()';
+    }
+
+    function addSection(isTheme) {
+        showDialogAjax(true, 'examSection.cshtml', {isTheme: isTheme, idExam: @examId}, "600", created);
+    }
+
+    function editSection(id) {
+        showDialogAjax(true, 'examSection.cshtml', {idExamContent: id, idExam: @examId}, "600", created);
+    }
+
+    function created() {
+        $("#tree_themeSection").change(function() {
+            var treeVal = $("#themeSection").val();
+            $.ajax({
+                url: "examThemeQCount.cshtml",
+                type: "POST",
+                data: {idTheme: treeVal}
+            }).done(function(data) {
+                var maxValue = parseInt(data);
+                if(isNaN(maxValue)) maxValue = 0;
+                $("#maxQuestions").html(maxValue);
+                $("#numberQuestions").val(0);
+                $("#numberQuestions").change(function() {
+                    validateInt($(this), event, 0, maxValue);
+                });
+            });
+        });
+        $("#tree_sectionQTheme").change(function() {
+            var treeVal = $("#sectionQTheme").val();
+            $.ajax({
+                url: "examSectionQList.cshtml",
+                type: "POST",
+                data: {idTheme: treeVal, idExam: @examId, page: 0}
+            }).done(function(data) {
+                $("#sectionQList").html(data);
+            });
+        });
+        layoutElements();
+    }
+
+    function showQuestion(idq) {
+        //$("#q_" + idq).toggle("cellSelected");
+        $("#q_chk_" + idq).prop("checked", !$("#q_chk_" + idq).prop("checked"));
+    }
+
+    function deleteQ(idec) {
+        saveSectionQuestion(true, idec);
+    }
+
+    function saveSectionQuestion(isDel, idec) {
+        var idQuestionList;
+        $(".questionChk:checked").each(function() {
+            idQuestionList = strAdd(idQuestionList, ",", $(this).prop('id').substr(6));
+        });
+        $.ajax({
+            url: "examSectionSave.cshtml",
+            type: "POST",
+            data: {idExam: @examId, questionList: idQuestionList, idExamContent: idec, deleting: isDel ? 1 : 0}
+        }).done(function(data) {
+            if(data != "") {
+                showMessage(true, data, 200);
+            } else {
+                doSave();
+            }
+        });
+    }
+
+    function saveSectionTheme(isDel) {
+        var theme = $("#themeSection").val();
+        var numberQuestion = $("#numberQuestions").val();
+        var idExamContent = $("#idExamContentHolder").val();
+        var err = "";
+        if(!theme) {
+            err = strAdd(err, "<br />", "@Html.Raw(Text.MissingTheseFields + " " + Text.Theme)");
+        } else {
+            if(parseInt(numberQuestion) < 1) {
+                err = strAdd(err, "<br />", "@Html.Raw(Text.EnterIntegerBetweenXandY)".replace("%%0", "1").replace("%%1", $("#maxQuestions").html()));
+            }
+        }
+        if(err != "") {
+            showMessage(true, err, 200);
+            return false;
+        }
+        $.ajax({
+            url: "examSectionSave.cshtml",
+            type: "POST",
+            data: {idExam: @examId, idExamContent: idExamContent, themeFullId: theme, questions: numberQuestion, deleting: isDel ? 1 : 0}
+        }).done(function(data) {
+            if(data != "") {
+                showMessage(true, data, 200);
+            } else {
+                doSave();
+            }
+        });
+    }
+
+    function doDelete() {
+        if(confirm("@Html.Raw(Text.ConfirmDelete)")) {
+            $('#cmd').val('D');
+            $('#classicForm').submit();
+        }
+    }
+
+    function doSave() {
+        $('#cmd').val('S');
+        $("#tab").val(currentTab);
+        $('#classicForm').submit();
+    }
+
+    function invalidateList(arrList) {
+        showMessage(true, '@Text.WaitAMoment', "");
+        $.ajax({
+            type: "POST",
+            url: "examSectionOrder.cshtml",
+            data: { idExam: @examId, ecList: arrList.toString() }
+        }).done(function(data) {
+            killAllMessages();
+            if(data != "") {
+                showMessage(true, data, "");
+            }
+        });
+    }
+}
+
+@section PageContent {
+    @Html.Raw(pageContent)
+    <input type="hidden" id="cmd" name="cmd" />
+    <input type="hidden" id="tab" name="tab" value="@currentTab" />
+    <input type="hidden" id="id" name="id" value="@examId" />
+    @Html.Raw(Web.MakeWYSIWYG())
+    <script type="text/javascript">
+        currentTab = @currentTab;
+    </script>
+    @{
+        if(hasQuestions && canEdit)
+        {
+        <script type="text/javascript">
+            var fixHelper = function(e, ui) {
+                ui.children().each(function() {
+                    $(this).width($(this).width());
+                });
+                return ui;
+            };
+            $("#sort tbody").sortable({
+                helper: fixHelper,
+                stop: function(event, ui) {
+                    invalidateList($(this).sortable('toArray'));
+                }
+            }).disableSelection();
+        </script>
+        }
+    }
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

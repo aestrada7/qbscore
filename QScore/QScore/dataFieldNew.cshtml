@@ -1,0 +1,55 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS;
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    if ((currentId != 0) && (Modules.Permission(modules, Modules.ADD_FIELDS)))
+    {
+        string name = Request.Form["name"];
+        string kind = Request.Form["kind"];
+        if (!String.IsNullOrEmpty(name))
+        {
+            DataDesc dataDesc = new DataDesc();
+            dataDesc.Name = name;
+            try
+            {
+                dataDesc.Kind = Convert.ToInt32(kind);
+            }
+            catch(FormatException ex) {}
+            dataDesc.IdDataGroup = Common.GetBDNum("LastId", "SELECT TOP 1 IdDataGroup AS LastId FROM DataGroup ORDER BY GroupSequence DESC");
+            int errorCode = dataDesc.Create();
+            Context.Response.Clear();
+            if(errorCode == ErrorCode.NO_ERROR)
+            {
+                Log.Add(SessionHandler.Id, LogKind.CREATE, Modules.DATAFIELDS_ADMINISTRATION, 0, Common.SQSF(name));
+                Context.Response.Write(Text.ChangesHaveBeenSaved);
+            }
+            else if(errorCode == ErrorCode.ALREADY_EXISTS)
+            {
+                Context.Response.Write(Text.ChangesNotSaved + ": " + Common.StrLang(Text.RecordXTaken, name));
+            }
+            Context.Response.End();
+        }
+        else
+        {
+            Context.Response.Clear();
+            Context.Response.Write(Text.MissingFields);
+            Context.Response.End();
+        }
+    }
+    else
+    {
+        Context.Response.Clear();
+        Context.Response.Write(Text.CannotPerformCommand);
+        Context.Response.End();
+    }
+}

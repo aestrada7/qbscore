@@ -1,0 +1,135 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Exams;
+@using QBS;
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+    string pageContent = "";
+    
+    if ((currentId != 0) && (Modules.Permission(modules, Modules.EVAL_EXAM_CATALOG)))
+    {
+        int idExamContent = 0;
+        int idExam = 0;
+        int idTheme = 0;
+        int numberOfQuestions = 0;
+        string idQuestionList = "";
+        bool isDeleting = false;
+        
+        try
+        {
+            idExamContent = Convert.ToInt32(Request.Form["idExamContent"]);
+            idExam = Convert.ToInt32(Request.Form["idExam"]);
+            idTheme = ExamThemes.GetThemeIdFromTree(Request.Form["themeFullId"]);
+            numberOfQuestions = Convert.ToInt32(Request.Form["questions"]);
+            idQuestionList = Request.Form["questionList"];
+            isDeleting = Convert.ToInt32(Request.Form["deleting"]) == 1;
+        }
+        catch(FormatException ex) {}
+        ExamContent examContent;
+        
+        if(idExamContent != 0)
+        {
+            examContent = new ExamContent(idExamContent);
+            if(isDeleting)
+            {
+                examContent.Delete();
+            }
+            else
+            {
+                examContent.IdTheme = idTheme;
+                examContent.QuestionCount = numberOfQuestions;
+                examContent.Update();
+            }
+            Context.Response.Clear();
+            Context.Response.End();
+        }
+        else
+        {
+            if(idTheme != 0)
+            {
+                bool themeExists = false;
+                bool parentOrChildThemeExists = false;
+                string parentChildTheme = "";
+                Exam exam = new Exam(idExam);
+                foreach(ExamContent existingContent in exam.examContents)
+                {
+                    if(existingContent.IdTheme == idTheme)
+                    {
+                        themeExists = true;
+                        break;
+                    }
+                    ExamTheme existingTheme = new ExamTheme(existingContent.IdTheme);
+                    if(existingTheme.IsChild(idTheme) || existingTheme.IsParent(idTheme))
+                    {
+                        parentOrChildThemeExists = true;
+                        parentChildTheme = existingTheme.Theme;
+                        break;
+                    }
+                }
+                if(!themeExists && !parentOrChildThemeExists)
+                {
+                    examContent = new ExamContent();
+                    examContent.IdTheme = idTheme;
+                    examContent.IdExam = idExam;
+                    examContent.QuestionCount = numberOfQuestions;
+                    examContent.Create();
+                    Context.Response.Clear();
+                    Context.Response.End();
+                }
+                else
+                {
+                    ExamTheme theme = new ExamTheme(idTheme);
+                    Context.Response.Clear();
+                    if(themeExists)
+                    {
+                        Context.Response.Write(Common.StrLang(Text.ThemeXAlreadyExists, theme.Theme));
+                    }
+                    else if(parentOrChildThemeExists)
+                    {
+                        Context.Response.Write(Common.StrLang(Text.ThemeXParentChildYAlreadyExists, theme.Theme + "," + parentChildTheme));
+                    }
+                    Context.Response.End();
+                }
+            }
+            else if(idQuestionList != "")
+            {
+                string[] questions = Common.CSVToArray(idQuestionList);
+                foreach(string question in questions)
+                {
+                    examContent = new ExamContent();
+                    examContent.IdExam = idExam;
+                    try
+                    {
+                        examContent.IdQuestion = Convert.ToInt32(question);
+                    }
+                    catch(FormatException ex) {}
+                    if(examContent.IdQuestion != 0)
+                    {
+                        examContent.Create();
+                    }
+                    else
+                    {
+                        Context.Response.Clear();
+                        Context.Response.Write(Text.CannotPerformCommand);
+                        Context.Response.End();                        
+                    }
+                }
+                Context.Response.Clear();
+                Context.Response.End();
+            }
+        }
+    }
+    else
+    {
+        Context.Response.Clear();
+        Context.Response.Write(Text.CannotPerformCommand);
+        Context.Response.End();
+    }
+}

@@ -1,0 +1,70 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Exams;
+@using QBS;
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+    string pageContent = "";
+    
+    if ((currentId != 0) && (Modules.Permission(modules, Modules.EVAL_EXAM_CATALOG)))
+    {
+        int idExamContent = 0;
+        int idExam = 0;
+        bool isTheme = false;
+        bool canEdit = false;
+        try
+        {
+            idExamContent = Convert.ToInt32(Request.Form["idExamContent"]);
+            idExam = Convert.ToInt32(Request.Form["idExam"]);
+            isTheme = Convert.ToInt32(Request.Form["isTheme"]) == 1;        
+            canEdit = Common.GetBDNum("HowMany", "SELECT COUNT(*) AS HowMany FROM UserExam WHERE IdExam = " + idExam + " AND Status <> " + UserExamStatus.PENDING) == 0; 
+        }
+        catch(FormatException ex) {}
+        ExamContent examContent = new ExamContent(idExamContent);
+        pageContent = DrawInput.InputHiddenField("idExamContentHolder", idExamContent.ToString(), "", "");
+        if (isTheme || examContent.IdTheme != 0)
+        {
+            ExamTheme theme = new ExamTheme(examContent.IdTheme);
+            string themeName = theme.Theme;
+            pageContent += "<table width='80%' align='center'><tr><td width='30%' align='right'>" + Text.Theme + ":</td><td>" + ExamThemes.DrawThemeTreeSelect("themeSection", examContent.IdTheme.ToString(), 0, Text.None) + "</td></tr>";
+            pageContent += "<tr><td align='right'>" + Text.NumberOfQuestions + ":</td><td>" + DrawInput.InputTextField("numberQuestions", examContent.QuestionCount.ToString(), "", "", "", "width: 30px;", "") + " " + Text.MaxValue + ": <span id='maxQuestions'>" + (examContent.IdTheme == 0 ? 0 : theme.NumberOfQuestions()) + "</span></td></tr>";
+            pageContent += "<tr><td colspan='2' align='center'>";
+            if (canEdit)
+            {
+                pageContent += DrawInput.InputButton("saveSectionBtn", Text.Save, "", "saveSectionTheme();", "background-image: url(./images/save.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+                if (examContent.IdExamContent != 0)
+                {
+                    pageContent += DrawInput.InputButton("delSectionBtn", Text.Delete, "", "saveSectionTheme(true);", "background-image: url(./images/delete.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+                }
+            }
+            pageContent += DrawInput.InputButton("closeSectionWin", Text.Close, "", "killAllMessages();", "background-image: url(./images/cancel.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+            pageContent += "</td></table>";
+        }
+        else
+        {
+            pageContent += "<table width='80%' align='center'><tr><td width='30%' align='right'>" + Text.Theme + ":</td><td>" + ExamThemes.DrawThemeTreeSelect("sectionQTheme", "0", 0, Text.None) + "</td></tr>";
+            pageContent += "<tr><td colspan='2'><div id='sectionQList'>&nbsp;</div></td></tr>";
+            pageContent += "<tr><td colspan='2' align='center'>";
+            if (canEdit)
+            {
+                pageContent += DrawInput.InputButton("saveSectionBtn", Text.Save, "", "saveSectionQuestion();", "background-image: url(./images/save.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+            }
+            pageContent += DrawInput.InputButton("closeSectionWin", Text.Close, "", "killAllMessages();", "background-image: url(./images/cancel.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+            pageContent += "</td></table>";
+        }
+        Context.Response.Write(pageContent);
+    }
+    else
+    {
+        Context.Response.Clear();
+        Context.Response.Write(Text.CannotPerformCommand);
+        Context.Response.End();
+    }
+}

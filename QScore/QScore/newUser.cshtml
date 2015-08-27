@@ -1,0 +1,127 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.mdl_Add_User;
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    string pageContent = "";
+    if ((currentId != 0) && (Modules.Permission(modules, Modules.ADD_USER)))
+    {
+        SessionHandler.ClearHistory();
+        string name = Request.Form["name"];
+        string lastName = Request.Form["lastName"];
+        string motherLastName = Request.Form["motherLastName"];
+        string username = Request.Form["username"];
+        string password = Request.Form["password"];
+        string passwordConfirm = Request.Form["passwordConfirm"];
+        string role = Request.Form["role"];
+        if (String.IsNullOrEmpty(role))
+        {
+            role = "2"; //Defaults to user
+        }
+        if(IsPost)
+        {
+            string missingFields = "";
+            missingFields = Common.StrAdd(missingFields, ", ", Common.MissingField(Text.Name, name));
+            missingFields = Common.StrAdd(missingFields, ", ", Common.MissingField(Text.LastName, lastName));
+            missingFields = Common.StrAdd(missingFields, ", ", Common.MissingField(Text.Username, username));
+            missingFields = Common.StrAdd(missingFields, ", ", Common.MissingField(Text.Password, password));
+            missingFields = Common.StrAdd(missingFields, ", ", Common.MissingField(Text.Password + " (" + Text.RepeatToConfirm + ")", passwordConfirm));
+            if (missingFields != "") 
+            {
+                errorMessage = Text.MissingTheseFields + " " + missingFields;
+            }
+            if (password != passwordConfirm)
+            {
+                errorMessage = Common.StrAdd(errorMessage, "<br />", Text.PasswordConfirmationDoesntMatch);
+            }
+            if(errorMessage == "")
+            {
+                User user = new User();
+                user.Name = name;
+                user.LastName = lastName;
+                user.MotherLastName = motherLastName;
+                user.Username = username;
+                user.Password = password;
+                try
+                {
+                    user.IdRole = Convert.ToInt32(role);
+                }
+                catch(FormatException ex) {}
+                if(user.IdRole != 0)
+                {
+                    if(user.Create() == 0)
+                    {
+                        errorMessage = Common.StrLang(Text.UsernameTaken, username);
+                    }
+                    else
+                    {
+                        Response.Redirect(Menu.USER_ADMINISTRATION);
+                    }
+                }
+            }
+        }
+        pageContent += "<table width='100%'>";
+        pageContent += "<tr><td align='right' width='50%'>" + Text.Name + ":</td><td>" + DrawInput.InputTextField("name", name, "", "", "", "", "") + "</td></tr>";
+        pageContent += "<tr><td align='right' width='50%'>" + Text.LastName + ":</td><td>" + DrawInput.InputTextField("lastName", lastName, "", "", "", "", "") + "</td></tr>";
+        pageContent += "<tr><td align='right' width='50%'>" + Text.MotherLastName + ":</td><td>" + DrawInput.InputTextField("motherLastName", motherLastName, "", "", "", "", "") + "</td></tr>";
+        pageContent += "<tr><td align='right' width='50%'>" + Text.Username + ":</td><td>" + DrawInput.InputTextField("username", username, "", "", "", "", "") + "</td></tr>";
+        pageContent += "<tr><td align='right' width='50%'>" + Text.Password + ":</td><td>" + DrawInput.InputPasswordField("password", "", "", "", "", "", "") + "</td></tr>";
+        pageContent += "<tr><td align='right' width='50%'>" + Text.Password + " (" + Text.RepeatToConfirm + "):</td><td>" + DrawInput.InputPasswordField("passwordConfirm", "", "", "", "", "", "") + "</td></tr>";
+        pageContent += "<tr><td align='right' width='50%'>" + Text.UserRole + ":</td><td>" + DrawInput.InputSelect("role", role, "Roles", "IdRole", "Role", "", "", "", "", "").Replace("#ADMINISTRATOR#", Text.role_Administrator).Replace("#USER#", Text.role_User) + "</td></tr>";
+        pageContent += "<tr><td colspan='2' align='center'>" + DrawInput.InputSubmit("btnOk", Text.OK, "button", "doSubmit();", "", "") + "&nbsp;" + DrawInput.InputButton("btnCancel", Text.Cancel, "button", "doCancel();", "", "") + "</td></tr>";
+        pageContent += "</table>";
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function doSubmit()
+    {
+        $("#classicform").submit();
+    }
+
+    function doCancel()
+    {
+        location.href = "@Menu.USER_ADMINISTRATION";
+    }
+}
+
+@section PageContent {
+    @Html.Raw(pageContent)
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

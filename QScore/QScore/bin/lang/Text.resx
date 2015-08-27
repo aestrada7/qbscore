@@ -1,0 +1,864 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="IncorrectCredentials" xml:space="preserve">
+    <value>Nombre de Usuario y/o Contraseña incorrectos</value>
+  </data>
+  <data name="InputLogin" xml:space="preserve">
+    <value>Ingrese sus datos para iniciar sesión</value>
+  </data>
+  <data name="Login" xml:space="preserve">
+    <value>Iniciar Sesión</value>
+  </data>
+  <data name="LoginPage" xml:space="preserve">
+    <value>Inicio de Sesión</value>
+  </data>
+  <data name="Logout" xml:space="preserve">
+    <value>Cerrar Sesión</value>
+  </data>
+  <data name="LostSession" xml:space="preserve">
+    <value>La sesión ha expirado, ingrese nuevamente.</value>
+  </data>
+  <data name="MainPage" xml:space="preserve">
+    <value>Inicio</value>
+  </data>
+  <data name="mdl_Add_Fields" xml:space="preserve">
+    <value>Agregar Campos</value>
+  </data>
+  <data name="mdl_Add_User" xml:space="preserve">
+    <value>Agregar Usuarios</value>
+  </data>
+  <data name="mdl_Datafields_Administration" xml:space="preserve">
+    <value>Administración de Campos</value>
+  </data>
+  <data name="mdl_Delete_Fields" xml:space="preserve">
+    <value>Eliminar Campos</value>
+  </data>
+  <data name="mdl_Delete_User" xml:space="preserve">
+    <value>Eliminar Usuarios</value>
+  </data>
+  <data name="mdl_Edit_Fields" xml:space="preserve">
+    <value>Editar Campos</value>
+  </data>
+  <data name="mdl_Edit_Passwords" xml:space="preserve">
+    <value>Editar Contraseñas</value>
+  </data>
+  <data name="mdl_Edit_Permissions" xml:space="preserve">
+    <value>Editar Permisos</value>
+  </data>
+  <data name="mdl_Edit_Self_Info" xml:space="preserve">
+    <value>Editar Mis Datos</value>
+  </data>
+  <data name="mdl_Edit_Self_Password" xml:space="preserve">
+    <value>Cambiar Contraseña</value>
+  </data>
+  <data name="mdl_Edit_User" xml:space="preserve">
+    <value>Editar Usuarios</value>
+  </data>
+  <data name="mdl_Log_Access" xml:space="preserve">
+    <value>Bitácora del Sistema</value>
+  </data>
+  <data name="mdl_User_Administration" xml:space="preserve">
+    <value>Administración de Usuarios</value>
+  </data>
+  <data name="MissingFields" xml:space="preserve">
+    <value>Necesita completar todos los datos</value>
+  </data>
+  <data name="OK" xml:space="preserve">
+    <value>Aceptar</value>
+  </data>
+  <data name="Password" xml:space="preserve">
+    <value>Contraseña</value>
+  </data>
+  <data name="role_Administrator" xml:space="preserve">
+    <value>Administrador</value>
+  </data>
+  <data name="role_Full_Access" xml:space="preserve">
+    <value>Acceso Completo</value>
+  </data>
+  <data name="role_User" xml:space="preserve">
+    <value>Usuario</value>
+  </data>
+  <data name="Username" xml:space="preserve">
+    <value>Usuario</value>
+  </data>
+  <data name="Catalogs" xml:space="preserve">
+    <value>Catálogos</value>
+  </data>
+  <data name="MyAccount" xml:space="preserve">
+    <value>Mi Cuenta</value>
+  </data>
+  <data name="SystemConfiguration" xml:space="preserve">
+    <value>Configuración del Sistema</value>
+  </data>
+  <data name="Users" xml:space="preserve">
+    <value>Usuarios</value>
+  </data>
+  <data name="SessionExpired" xml:space="preserve">
+    <value>Sesión Expirada</value>
+  </data>
+  <data name="FullName" xml:space="preserve">
+    <value>Nombre Completo</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>Nombre</value>
+  </data>
+  <data name="RegistryDate" xml:space="preserve">
+    <value>Fecha de Registro</value>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>Agregar</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Eliminar</value>
+  </data>
+  <data name="DoSelect" xml:space="preserve">
+    <value>Seleccione</value>
+  </data>
+  <data name="Edit" xml:space="preserve">
+    <value>Editar</value>
+  </data>
+  <data name="Option" xml:space="preserve">
+    <value>Opción</value>
+  </data>
+  <data name="Options" xml:space="preserve">
+    <value>Opciones</value>
+  </data>
+  <data name="Select" xml:space="preserve">
+    <value>Seleccionar</value>
+  </data>
+  <data name="Update" xml:space="preserve">
+    <value>Actualizar</value>
+  </data>
+  <data name="LastName" xml:space="preserve">
+    <value>Apellido Paterno</value>
+  </data>
+  <data name="MotherLastName" xml:space="preserve">
+    <value>Apellido Materno</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="InvalidPassword" xml:space="preserve">
+    <value>Contraseña Inválida</value>
+  </data>
+  <data name="RepeatToConfirm" xml:space="preserve">
+    <value>Repita para confirmar</value>
+  </data>
+  <data name="MissingTheseFields" xml:space="preserve">
+    <value>Debe ingresar los siguientes datos:</value>
+  </data>
+  <data name="PasswordConfirmationDoesntMatch" xml:space="preserve">
+    <value>La contraseña y confirmación de contraseña deben ser iguales</value>
+  </data>
+  <data name="UsernameTaken" xml:space="preserve">
+    <value>El usuario '%%0' ya existe.</value>
+  </data>
+  <data name="UserRole" xml:space="preserve">
+    <value>Rol de usuario</value>
+  </data>
+  <data name="FirstPage" xml:space="preserve">
+    <value>Primera Página</value>
+  </data>
+  <data name="Last" xml:space="preserve">
+    <value>Anterior</value>
+  </data>
+  <data name="LastPage" xml:space="preserve">
+    <value>Última Página</value>
+  </data>
+  <data name="mdl_Catalogs" xml:space="preserve">
+    <value>Catálogos del Sistema</value>
+  </data>
+  <data name="mdl_Role_Catalog" xml:space="preserve">
+    <value>Catálogo de Roles</value>
+  </data>
+  <data name="Next" xml:space="preserve">
+    <value>Siguiente</value>
+  </data>
+  <data name="Page" xml:space="preserve">
+    <value>Página</value>
+  </data>
+  <data name="Pages" xml:space="preserve">
+    <value>Páginas</value>
+  </data>
+  <data name="PageXofY" xml:space="preserve">
+    <value>Página %%0 de %%1</value>
+  </data>
+  <data name="Page_s" xml:space="preserve">
+    <value>Página(s)</value>
+  </data>
+  <data name="ShowingXofY" xml:space="preserve">
+    <value>Mostrando %%0 de %%1</value>
+  </data>
+  <data name="Role" xml:space="preserve">
+    <value>Rol</value>
+  </data>
+  <data name="Roles" xml:space="preserve">
+    <value>Roles</value>
+  </data>
+  <data name="Role_s" xml:space="preserve">
+    <value>Rol(es)</value>
+  </data>
+  <data name="GrantPermission" xml:space="preserve">
+    <value>Permitir Acceso</value>
+  </data>
+  <data name="Module" xml:space="preserve">
+    <value>Módulo</value>
+  </data>
+  <data name="RevokePermission" xml:space="preserve">
+    <value>Denegar Acceso</value>
+  </data>
+  <data name="RevokeSupersedesGrant" xml:space="preserve">
+    <value>Al marcar ambas opciones, denegar será el que se utilice</value>
+  </data>
+  <data name="Back" xml:space="preserve">
+    <value>Regresar</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Guardar</value>
+  </data>
+  <data name="ConfirmDelete" xml:space="preserve">
+    <value>¿Está seguro de que desea eliminar el registro? Esta operación es irreversible.</value>
+  </data>
+  <data name="ChangesHaveBeenSaved" xml:space="preserve">
+    <value>Los cambios han sido guardados.</value>
+  </data>
+  <data name="CannotPerformCommand" xml:space="preserve">
+    <value>No tiene permisos suficientes para llevar a cabo esta operación.</value>
+  </data>
+  <data name="ChangesNotSaved" xml:space="preserve">
+    <value>Los cambios no han sido guardados</value>
+  </data>
+  <data name="RecordXTaken" xml:space="preserve">
+    <value>El registro '%%0' ya existe.</value>
+  </data>
+  <data name="No" xml:space="preserve">
+    <value>No</value>
+  </data>
+  <data name="Yes" xml:space="preserve">
+    <value>Si</value>
+  </data>
+  <data name="LoginFailed" xml:space="preserve">
+    <value>Acceso fallido al sistema</value>
+  </data>
+  <data name="SessionClosed" xml:space="preserve">
+    <value>Sesión Cerrada</value>
+  </data>
+  <data name="SessionStarted" xml:space="preserve">
+    <value>Sesión Iniciada</value>
+  </data>
+  <data name="Record" xml:space="preserve">
+    <value>Registro</value>
+  </data>
+  <data name="Records" xml:space="preserve">
+    <value>Registros</value>
+  </data>
+  <data name="DateTime" xml:space="preserve">
+    <value>Fecha/Hora</value>
+  </data>
+  <data name="log_Create" xml:space="preserve">
+    <value>Alta</value>
+  </data>
+  <data name="log_Delete" xml:space="preserve">
+    <value>Baja</value>
+  </data>
+  <data name="log_Update" xml:space="preserve">
+    <value>Cambio</value>
+  </data>
+  <data name="Action" xml:space="preserve">
+    <value>Acción</value>
+  </data>
+  <data name="General" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="Session" xml:space="preserve">
+    <value>Sesión</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Descripción</value>
+  </data>
+  <data name="Filters" xml:space="preserve">
+    <value>Filtros</value>
+  </data>
+  <data name="EnterValueBetweenXandY" xml:space="preserve">
+    <value>Ingrese un valor entre %%0 y %%1</value>
+  </data>
+  <data name="InvalidEmail" xml:space="preserve">
+    <value>Correo electrónico inválido</value>
+  </data>
+  <data name="InvalidData" xml:space="preserve">
+    <value>Dato inválido</value>
+  </data>
+  <data name="Active" xml:space="preserve">
+    <value>Activo</value>
+  </data>
+  <data name="DataGroup" xml:space="preserve">
+    <value>Grupo de Datos</value>
+  </data>
+  <data name="Field" xml:space="preserve">
+    <value>Campo</value>
+  </data>
+  <data name="Fields" xml:space="preserve">
+    <value>Campos</value>
+  </data>
+  <data name="Field_s" xml:space="preserve">
+    <value>Campo(s)</value>
+  </data>
+  <data name="fld_Checkbox" xml:space="preserve">
+    <value>Checkbox</value>
+  </data>
+  <data name="fld_Date" xml:space="preserve">
+    <value>Fecha</value>
+  </data>
+  <data name="fld_Email" xml:space="preserve">
+    <value>Correo Electrónico</value>
+  </data>
+  <data name="fld_Float" xml:space="preserve">
+    <value>Número con Decimales</value>
+  </data>
+  <data name="fld_Integer" xml:space="preserve">
+    <value>Número Entero</value>
+  </data>
+  <data name="fld_Label" xml:space="preserve">
+    <value>Etiqueta</value>
+  </data>
+  <data name="fld_Multitext" xml:space="preserve">
+    <value>Texto Multilínea</value>
+  </data>
+  <data name="fld_Options" xml:space="preserve">
+    <value>Opciones Fijas</value>
+  </data>
+  <data name="fld_SimpleText" xml:space="preserve">
+    <value>Texto Simple</value>
+  </data>
+  <data name="fld_Slider" xml:space="preserve">
+    <value>Barra de Desplazamiento</value>
+  </data>
+  <data name="fld_Tree" xml:space="preserve">
+    <value>Árbol de Selección</value>
+  </data>
+  <data name="fld_YesNo" xml:space="preserve">
+    <value>Si / No</value>
+  </data>
+  <data name="Inactive" xml:space="preserve">
+    <value>Inactivo</value>
+  </data>
+  <data name="InvisibleToSelf" xml:space="preserve">
+    <value>Invisible al usuario</value>
+  </data>
+  <data name="Kind" xml:space="preserve">
+    <value>Tipo</value>
+  </data>
+  <data name="MaxValue" xml:space="preserve">
+    <value>Valor Máximo</value>
+  </data>
+  <data name="MinValue" xml:space="preserve">
+    <value>Valor Mínimo</value>
+  </data>
+  <data name="Required" xml:space="preserve">
+    <value>Requerido</value>
+  </data>
+  <data name="Sequence" xml:space="preserve">
+    <value>Secuencia</value>
+  </data>
+  <data name="FieldSequence" xml:space="preserve">
+    <value>Secuencia de Campos</value>
+  </data>
+  <data name="WaitAMoment" xml:space="preserve">
+    <value>Espere un momento</value>
+  </data>
+  <data name="CantDelete" xml:space="preserve">
+    <value>No se puede eliminar.</value>
+  </data>
+  <data name="DataGroupMustBeEmpty" xml:space="preserve">
+    <value>El grupo de datos debe estar vacio.</value>
+  </data>
+  <data name="CurrentPassword" xml:space="preserve">
+    <value>Contraseña Actual</value>
+  </data>
+  <data name="NewPassword" xml:space="preserve">
+    <value>Nueva Contraseña</value>
+  </data>
+  <data name="ResetPasswordTo" xml:space="preserve">
+    <value>Cambiar contraseña a</value>
+  </data>
+  <data name="RequiredFieldsMissing" xml:space="preserve">
+    <value>Los campos requeridos no fueron capturados o tienen datos inválidos.</value>
+  </data>
+  <data name="AdvancedSearch" xml:space="preserve">
+    <value>Búsqueda Avanzada</value>
+  </data>
+  <data name="DoSearch" xml:space="preserve">
+    <value>Buscar</value>
+  </data>
+  <data name="Search" xml:space="preserve">
+    <value>Búsqueda</value>
+  </data>
+  <data name="And" xml:space="preserve">
+    <value>y</value>
+  </data>
+  <data name="Contains" xml:space="preserve">
+    <value>contenga</value>
+  </data>
+  <data name="Is" xml:space="preserve">
+    <value>sea</value>
+  </data>
+  <data name="Or" xml:space="preserve">
+    <value>o</value>
+  </data>
+  <data name="Between" xml:space="preserve">
+    <value>Entre</value>
+  </data>
+  <data name="IsGreaterOrEqualTo" xml:space="preserve">
+    <value>sea mayor o igual a</value>
+  </data>
+  <data name="IsSmallerOrEqualTo" xml:space="preserve">
+    <value>sea menor o igual a</value>
+  </data>
+  <data name="IsBetween" xml:space="preserve">
+    <value>sea entre</value>
+  </data>
+  <data name="Clear" xml:space="preserve">
+    <value>Limpiar</value>
+  </data>
+  <data name="QuickSearch" xml:space="preserve">
+    <value>Búsqueda Rápida</value>
+  </data>
+  <data name="ShowAdvancedSearch" xml:space="preserve">
+    <value>Mostrar Búsqueda Avanzada</value>
+  </data>
+  <data name="Download" xml:space="preserve">
+    <value>Descargar</value>
+  </data>
+  <data name="DownloadLayout" xml:space="preserve">
+    <value>Descargar Formato</value>
+  </data>
+  <data name="LayoutNeeded" xml:space="preserve">
+    <value>Para importar requiere utilizar el formato correspondiente.</value>
+  </data>
+  <data name="mdl_Export_Users" xml:space="preserve">
+    <value>Exportación de Usuarios</value>
+  </data>
+  <data name="mdl_Import_Users" xml:space="preserve">
+    <value>Importación de Usuarios</value>
+  </data>
+  <data name="Export" xml:space="preserve">
+    <value>Exportar</value>
+  </data>
+  <data name="XUsersWillBeExported" xml:space="preserve">
+    <value>Se exportarán %%0 usuarios.</value>
+  </data>
+  <data name="FieldsToExport" xml:space="preserve">
+    <value>Campos a Exportar</value>
+  </data>
+  <data name="PleaseWait" xml:space="preserve">
+    <value>Espere un momento por favor</value>
+  </data>
+  <data name="Identifier" xml:space="preserve">
+    <value>Identificador</value>
+  </data>
+  <data name="ExternalIdentifier" xml:space="preserve">
+    <value>Identificador Externo</value>
+  </data>
+  <data name="Import" xml:space="preserve">
+    <value>Importar</value>
+  </data>
+  <data name="Upload" xml:space="preserve">
+    <value>Cargar</value>
+  </data>
+  <data name="EnterIntegerBetweenXandY" xml:space="preserve">
+    <value>Ingrese un valor entero entre %%0 y %%1</value>
+  </data>
+  <data name="InvalidDate" xml:space="preserve">
+    <value>Fecha Inválida</value>
+  </data>
+  <data name="Blocked" xml:space="preserve">
+    <value>Bloqueado</value>
+  </data>
+  <data name="Status" xml:space="preserve">
+    <value>Estado</value>
+  </data>
+  <data name="Detail" xml:space="preserve">
+    <value>Detalle</value>
+  </data>
+  <data name="ProcessCompleted" xml:space="preserve">
+    <value>Proceso Completado</value>
+  </data>
+  <data name="Row" xml:space="preserve">
+    <value>Fila</value>
+  </data>
+  <data name="RowImported" xml:space="preserve">
+    <value>Fila importada</value>
+  </data>
+  <data name="WrongLayout" xml:space="preserve">
+    <value>El archivo que intentó cargar no corresponde con los encabezados esperados, por favor descargue de nueva cuenta el formato.</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Cerrar</value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="mdl_Evaluation" xml:space="preserve">
+    <value>Exámenes</value>
+  </data>
+  <data name="mdl_Eval_Exam_Catalog" xml:space="preserve">
+    <value>Catálogo de Exámenes</value>
+  </data>
+  <data name="mdl_Eval_Import_Exams" xml:space="preserve">
+    <value>Importación de Exámenes</value>
+  </data>
+  <data name="mdl_Eval_Import_Results" xml:space="preserve">
+    <value>Importación de Resultados</value>
+  </data>
+  <data name="mdl_Eval_Question_Catalog" xml:space="preserve">
+    <value>Catálogo de Reactivos</value>
+  </data>
+  <data name="mdl_Eval_Reports" xml:space="preserve">
+    <value>Reportes</value>
+  </data>
+  <data name="mdl_Eval_Solve_User" xml:space="preserve">
+    <value>Aplicación de Exámenes de Usuarios</value>
+  </data>
+  <data name="mdl_Eval_Theme_Catalog" xml:space="preserve">
+    <value>Catálogo de Temas</value>
+  </data>
+  <data name="DifficultyIndex" xml:space="preserve">
+    <value>Índice de Dificultad</value>
+  </data>
+  <data name="DiscriminationIndex" xml:space="preserve">
+    <value>Índice de Discriminación</value>
+  </data>
+  <data name="Exam" xml:space="preserve">
+    <value>Examen</value>
+  </data>
+  <data name="Exams" xml:space="preserve">
+    <value>Exámenes</value>
+  </data>
+  <data name="Exam_s" xml:space="preserve">
+    <value>Examen(es)</value>
+  </data>
+  <data name="Question" xml:space="preserve">
+    <value>Reactivo</value>
+  </data>
+  <data name="Questions" xml:space="preserve">
+    <value>Reactivos</value>
+  </data>
+  <data name="Question_s" xml:space="preserve">
+    <value>Reactivo(s)</value>
+  </data>
+  <data name="Theme" xml:space="preserve">
+    <value>Tema</value>
+  </data>
+  <data name="Themes" xml:space="preserve">
+    <value>Temas</value>
+  </data>
+  <data name="Theme_s" xml:space="preserve">
+    <value>Tema(s)</value>
+  </data>
+  <data name="CorrectOption" xml:space="preserve">
+    <value>Opción Correcta</value>
+  </data>
+  <data name="MustHaveAtLeastTwoOptions" xml:space="preserve">
+    <value>Deben haber por lo menos dos opciones de respuesta.</value>
+  </data>
+  <data name="MustSelectAtLeastOneCorrectAnswer" xml:space="preserve">
+    <value>Debe seleccionar por lo menos una opción correcta.</value>
+  </data>
+  <data name="Points" xml:space="preserve">
+    <value>Puntos</value>
+  </data>
+  <data name="QuestionHasBeenUsedWillBeCloned" xml:space="preserve">
+    <value>Este reactivo ya ha sido utilizado, si hace algún cambio, se generará una copia de este reactivo para guardarlo como histórico.</value>
+  </data>
+  <data name="DoesntApply" xml:space="preserve">
+    <value>No Aplica</value>
+  </data>
+  <data name="NA" xml:space="preserve">
+    <value>N/A</value>
+  </data>
+  <data name="NoParent" xml:space="preserve">
+    <value>Sin Padre</value>
+  </data>
+  <data name="Parent" xml:space="preserve">
+    <value>Padre</value>
+  </data>
+  <data name="ParentTheme" xml:space="preserve">
+    <value>Tema Padre</value>
+  </data>
+  <data name="Root" xml:space="preserve">
+    <value>Raíz</value>
+  </data>
+  <data name="Start" xml:space="preserve">
+    <value>Inicio</value>
+  </data>
+  <data name="None" xml:space="preserve">
+    <value>Ninguno</value>
+  </data>
+  <data name="MasteryScore" xml:space="preserve">
+    <value>Calificación Mínima Aprobatoria</value>
+  </data>
+  <data name="ShuffleQuestions" xml:space="preserve">
+    <value>Mostrar preguntas en orden aleatorio</value>
+  </data>
+  <data name="Section" xml:space="preserve">
+    <value>Sección</value>
+  </data>
+  <data name="Sections" xml:space="preserve">
+    <value>Secciones</value>
+  </data>
+  <data name="Section_s" xml:space="preserve">
+    <value>Sección(es)</value>
+  </data>
+  <data name="AllowSelfEnroll" xml:space="preserve">
+    <value>Permitir auto-inscripción</value>
+  </data>
+  <data name="Configuration" xml:space="preserve">
+    <value>Configuración</value>
+  </data>
+  <data name="Instruction" xml:space="preserve">
+    <value>Instrucción</value>
+  </data>
+  <data name="Instructions" xml:space="preserve">
+    <value>Instrucciones</value>
+  </data>
+  <data name="MaxNumberOfQuestions" xml:space="preserve">
+    <value>Numero Máximo de Preguntas</value>
+  </data>
+  <data name="NumberOfQuestions" xml:space="preserve">
+    <value>Numero de Preguntas</value>
+  </data>
+  <data name="ThemeXAlreadyExists" xml:space="preserve">
+    <value>El tema %%0 ya existe en el examen.</value>
+  </data>
+  <data name="EvalApplication" xml:space="preserve">
+    <value>Aplicación de Exámenes</value>
+  </data>
+  <data name="Applied" xml:space="preserve">
+    <value>Aplicado</value>
+  </data>
+  <data name="Exam_Pending" xml:space="preserve">
+    <value>Pendiente</value>
+  </data>
+  <data name="Exam_Complete" xml:space="preserve">
+    <value>Completo</value>
+  </data>
+  <data name="Exam_Failed" xml:space="preserve">
+    <value>No Aprobado</value>
+  </data>
+  <data name="Exam_Incomplete" xml:space="preserve">
+    <value>Incompleto</value>
+  </data>
+  <data name="Exam_Passed" xml:space="preserve">
+    <value>Aprobado</value>
+  </data>
+  <data name="Continue" xml:space="preserve">
+    <value>Continuar</value>
+  </data>
+  <data name="Finish" xml:space="preserve">
+    <value>Terminar</value>
+  </data>
+  <data name="MustAnswerEveryQuestion" xml:space="preserve">
+    <value>Debe contestar totas las preguntas.</value>
+  </data>
+  <data name="NoPendingExams" xml:space="preserve">
+    <value>No hay examenes pendientes de aplicar.</value>
+  </data>
+  <data name="Score" xml:space="preserve">
+    <value>Calificación</value>
+  </data>
+  <data name="CorrectAnswer" xml:space="preserve">
+    <value>Respuesta Correcta</value>
+  </data>
+  <data name="SelectedAnswer" xml:space="preserve">
+    <value>Respuesta Seleccionada</value>
+  </data>
+  <data name="DateCompleted" xml:space="preserve">
+    <value>Fecha de Aplicación</value>
+  </data>
+  <data name="ExamHasBeenUsedCantBeEdited" xml:space="preserve">
+    <value>Este examen ya ha sido aplicado, no se pueden modificar las secciones (reactivos, temas).</value>
+  </data>
+  <data name="QuestionHasBeenUsedCantBeEdited" xml:space="preserve">
+    <value>Este reactivo ya ha sido aplicado, no puede ser modificado.</value>
+  </data>
+  <data name="Print" xml:space="preserve">
+    <value>Imprimir</value>
+  </data>
+  <data name="mdl_Eval_Assign" xml:space="preserve">
+    <value>Asignación de Exámenes</value>
+  </data>
+  <data name="QuestionsPerPage" xml:space="preserve">
+    <value>Preguntas por página</value>
+  </data>
+  <data name="Assign" xml:space="preserve">
+    <value>Asignar</value>
+  </data>
+  <data name="ExamsToAssign" xml:space="preserve">
+    <value>Exámenes a Asignar</value>
+  </data>
+  <data name="ConfirmAction" xml:space="preserve">
+    <value>¿Desea continuar?</value>
+  </data>
+  <data name="XExamsWillBeAssignedToYUsers" xml:space="preserve">
+    <value>Se asignarán %%0 exámenes a %%1 usuarios.</value>
+  </data>
+  <data name="SelectionOf" xml:space="preserve">
+    <value>Selección de</value>
+  </data>
+  <data name="MustSelectAFile" xml:space="preserve">
+    <value>Debe seleccionar un archivo.</value>
+  </data>
+  <data name="QuestionAlreadyExists" xml:space="preserve">
+    <value>La pregunta ya existe.</value>
+  </data>
+  <data name="ExamAssigned" xml:space="preserve">
+    <value>Examen asignado.</value>
+  </data>
+  <data name="ExamWasNotAssigned" xml:space="preserve">
+    <value>El examen no se asignó.</value>
+  </data>
+  <data name="ThemeXParentChildYAlreadyExists" xml:space="preserve">
+    <value>El examen ya incluye un tema padre o hijo ('%%1') del tema '%%0'.</value>
+  </data>
+  <data name="PendingExamExists" xml:space="preserve">
+    <value>La persona tiene asignado y pendiente el examen.</value>
+  </data>
+  <data name="SelfEnrollExamNotAttempted" xml:space="preserve">
+    <value>El examen es de autoinscripción y la persona no ha accedido.</value>
+  </data>
+  <data name="NumberOfAnswersDoesntMatch" xml:space="preserve">
+    <value>El número de respuestas es distinto.</value>
+  </data>
+  <data name="UserDoesntExist" xml:space="preserve">
+    <value>El usuario no existe.</value>
+  </data>
+  <data name="Help" xml:space="preserve">
+    <value>Ayuda</value>
+  </data>
+  <data name="MaxMins" xml:space="preserve">
+    <value>Límite (en minutos) del examen</value>
+  </data>
+  <data name="TimesUp" xml:space="preserve">
+    <value>Ha terminado el tiempo para la aplicación del examen.</value>
+  </data>
+  <data name="WontBeUsedIfZero" xml:space="preserve">
+    <value>No se utilizará si es cero</value>
+  </data>
+</root>

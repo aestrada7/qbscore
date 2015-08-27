@@ -1,0 +1,44 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS.Exams;
+@using QBS;
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+    string pageContent = "";
+    
+    if (currentId != 0)
+    {
+        string cmd = Request["cmd"];
+        string selectedIds = Request["ids"];
+        bool multipleSelection = (Request["multi"] == "1");
+        
+        //Exam
+        if(cmd == "EX")
+        {
+            pageContent += DrawInput.InputSelect("sel_" + cmd, selectedIds, "Exam", "IdExam", "Exam", "Status=" + ExamStatus.ACTIVE, "", "", "width: 100%;", multipleSelection ? " multiple='multiple'" : "");
+        }
+
+        pageContent += "<div align='center'>";
+        pageContent += DrawInput.InputButton("setSelBtn", Text.OK, "", "itemSelected('" + cmd + "', $('#sel_" + cmd + "').val());killAllMessages();", "height: 30px;", "");
+        pageContent += DrawInput.InputButton("closeSelBtn", Text.Close, "", "killAllMessages();", "background-image: url(./images/cancel.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+        pageContent += "</div>";
+        
+        Context.Response.Clear();
+        Context.Response.Write(pageContent);
+        Context.Response.End();
+    }
+    else
+    {
+        Context.Response.Clear();
+        Context.Response.Write(Text.CannotPerformCommand);
+        Context.Response.End();
+    }
+}

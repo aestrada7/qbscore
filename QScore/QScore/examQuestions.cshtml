@@ -1,0 +1,125 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS.Data;
+@using QBS.Exams;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.mdl_Eval_Question_Catalog;
+    string errorMessage = "";
+}
+
+@* Page Code *@
+@{
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    string pageContent = "";
+    int currentPage = 0;
+    currentPage = SessionHandler.RequestSessionInt("page");
+    if (currentPage == 0)
+    {
+        currentPage = 1;
+    }
+    if ((currentId != 0) && (Modules.PermissionOr(modules, Modules.questionAdministratorModuleList)))
+    {
+        SessionHandler.ClearAndAddToHistory(Menu.EVAL_QUESTION_CATALOG);
+        string fullFilters = "";
+        //fullFilters = Common.StrAdd(fullFilters, " AND ", Data.GetFilters());
+        pageContent += ExamQuestions.GetQuestionList(modules, currentPage, fullFilters, false);
+        string userOptions = "";
+        if (Modules.Permission(modules, Modules.EVAL_QUESTION_CATALOG_ADD))
+        {
+            userOptions = "<br />" + DrawInput.InputButton("newQuestion", Text.Add, "", "doAdd();", "background-image: url(./images/new.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+        }
+        if (userOptions != "")
+        {
+            pageContent += "<div align='center' width='100%'>" + userOptions + "</div>";
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    function firstPage()
+    {
+        $('#page').val(1);
+        submitForm();
+    }
+    function nextPage()
+    {
+        $('#page').val(parseInt($('#page').val()) + 1);
+        submitForm();
+    }
+    function prevPage()
+    {
+        $('#page').val(parseInt($('#page').val()) - 1);
+        submitForm();
+    }
+    function lastPage(last)
+    {
+        $('#page').val(last);
+        submitForm();
+    }
+    function doAdd()
+    {
+        navigateToURL("@Menu.EVAL_QUESTION_CATALOG_EDIT", "cmd", "N");
+    }
+    function showQuestion(id)
+    {
+        navigateToURL("@Menu.EVAL_QUESTION_CATALOG_EDIT", "id", id);
+    }
+    function showAdv()
+    {
+        $("#searchContent").show(100);
+        $("#toAdvLink").hide(100);
+    }
+    function closeAdv()
+    {
+        $("#searchContent").hide(100);
+        $("#toAdvLink").show(100);
+    }
+    function clearAdv()
+    {
+        $("#clearSearch").val(1);
+        $('#classicForm').submit();
+    }
+    function submitForm()
+    {
+        $("#tab").val(currentTab);
+        $('#classicForm').submit();
+    }
+}
+
+@section PageContent {
+    @Html.Raw(pageContent)
+    <input type="hidden" id="page" name="page" value="@currentPage" />
+    <input type="hidden" id="clearSearch" name="clearSearch" value="" />
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}

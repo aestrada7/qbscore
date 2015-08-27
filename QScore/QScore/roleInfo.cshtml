@@ -1,0 +1,178 @@
+﻿@using System.Configuration;
+@using System.Resources;
+@using Aexis;
+@using Aexis.Web;
+@using QScore.lang;
+@using QBS.ACL;
+@using QBS;
+
+@* Connection, Layout, Startup Variables *@
+@{
+    Layout = "~/layouts/Standard/Layout.cshtml";
+    string title = Text.Role;
+    string errorMessage = "";
+    string subtitle = "";
+}
+
+@* Page Code *@
+@{
+    int roleId = 0;
+    int currentId = SessionHandler.Id;
+    Dictionary<string, bool> modules = SessionHandler.Modules;
+
+    string pageContent = "";
+    if ((currentId != 0) && (Modules.PermissionOr(modules, Modules.roleAdministratorModuleList)))
+    {
+        roleId = Convert.ToInt32(Request["id"]);
+        Role role = new Role(roleId);
+        subtitle = role.RoleName;
+        string command = Request["cmd"];
+        if(command == "S" || command == "A")
+        {
+            if (Modules.Permission(modules, Modules.ROLE_CATALOG_EDIT))
+            {
+                int errorCode = 0;
+                role.RoleName = Request["roleName"];
+                if(command == "S")
+                {
+                    errorCode = role.Update();
+                }
+                else
+                {
+                    errorCode = role.Create();
+                }
+                if(errorCode == ErrorCode.NO_ERROR)
+                {
+                    roleId = role.IdRole;
+                    role.UpdateRoleModules(Request);
+                    errorMessage = Text.ChangesHaveBeenSaved;
+                    subtitle = role.RoleName;
+                    command = "";
+                }
+                else if(errorCode == ErrorCode.ALREADY_EXISTS)
+                {
+                    errorMessage = Text.ChangesNotSaved + ": " + Common.StrLang(Text.RecordXTaken, Request["RoleName"]);
+                }
+                else if(errorCode == ErrorCode.MISSING_FIELDS)
+                {
+                    errorMessage = Text.MissingTheseFields + " " + Text.Name;
+                }
+            }
+            else
+            {
+                errorMessage = Text.CannotPerformCommand;
+            }                
+        }
+        else if(command == "D")
+        {
+            if (Modules.Permission(modules, Modules.ROLE_CATALOG_DELETE))
+            {
+                role.Delete();
+                Response.Redirect(Menu.ROLE_CATALOG);
+            }
+            else
+            {
+                errorMessage = Text.CannotPerformCommand;
+            }
+        }
+        
+        pageContent = QBS.Roles.GetRoleInfo(roleId);
+        string userOptions = "";
+        if (Modules.Permission(modules, Modules.ROLE_CATALOG_EDIT) && (roleId > 2 || roleId == 0))
+        {
+            userOptions = DrawInput.InputButton("saveBtn", Text.Save, "", command != "N" ? "doSave();" : "doNew();", "background-image: url(./images/save.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", "");
+        }
+        if (Modules.Permission(modules, Modules.ROLE_CATALOG_DELETE) && roleId != 0 && roleId > 2)
+        {
+            userOptions = Common.StrAdd(userOptions, "&nbsp;", DrawInput.InputButton("deleteBtn", Text.Delete, "", "doDelete();", "background-image: url(./images/delete.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", ""));
+        }
+        userOptions = Common.StrAdd(userOptions, "&nbsp;", DrawInput.InputButton("backBtn", Text.Back, "", "goBack();", "background-image: url(./images/back.png); background-repeat: no-repeat; height: 30px; padding-left: 30px;", ""));
+        if (userOptions != "")
+        {
+            pageContent += "<div align='center' width='100%'>" + userOptions + "</div>";
+        }
+    }
+    else
+    {
+        Response.Redirect(Menu.SESSION_LOST);
+    }
+}
+
+@* Page Output *@
+
+@section PageTitle { @Html.Raw(title) }
+@section Subtitle { @Html.Raw(subtitle) }
+@section BackButtonAddress { @Menu.ROLE_CATALOG }
+
+@section Errors {
+    @{
+        if (errorMessage != "")
+        {
+            <div class="alert">@Html.Raw(errorMessage)</div>
+        }
+    }
+}
+
+@section JavaScript {
+    var roles = new Array();
+
+    $(document).ready(function(){
+      $('input[type=checkbox]').change(function () {
+        var stat = 0;
+        if($(this).prop("checked"))
+        {
+          stat = 1;
+        }
+        var idModule = $(this).prop("id").replace('grt_','').replace('rvk_','');
+        var prefix = $(this).prop("id").substr(0, 4);
+        checkTree(prefix, stat, idModule, idModule);
+      });
+      $('input:checked').each(function () {
+        var idModule = $(this).prop("id").replace('grt_','').replace('rvk_','');
+        var prefix = $(this).prop("id").substr(0, 4);
+        checkTree(prefix, 1, idModule, idModule);
+      });
+    });
+
+    function goBack()
+    {
+        location.href = '@Menu.ROLE_CATALOG';
+    }
+
+    function doDelete()
+    {
+        if(confirm("@Html.Raw(Text.ConfirmDelete)"))
+        {
+            $('#cmd').val('D');
+            $('#classicForm').submit();
+        }
+    }
+
+    function doSave()
+    {
+        $('#cmd').val('S');
+        $('#classicForm').submit();
+    }
+
+    function doNew()
+    {
+        $('#cmd').val('A');
+        $('#classicForm').submit();
+    }
+}
+
+@section PageContent {
+    <table width="70%" border="0" align="center">
+        <tr>
+            <td align="right" width="40%">@Html.Raw(Text.Name):</td>
+            <td align="left" width="60%">@Html.Raw(DrawInput.InputTextField("roleName", subtitle, "50", "", "", "width: 80%;", ""))</td>
+        </tr>
+    </table>
+    @Html.Raw(pageContent)
+    <input type="hidden" id="cmd" name="cmd" />
+    <input type="hidden" id="id" name="id" value="@roleId" />
+}
+
+@section Menu {
+    @Html.Raw(Menu.GetDropDown(modules, currentId))
+}
